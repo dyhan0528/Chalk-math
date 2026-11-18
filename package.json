@@ -1,0 +1,8 @@
+{
+  "name": "chalk-math",
+  "private": true,
+  "version": "1.0.0",
+  "description": "칠판 수학 — 한 문제를 3~5분 칠판 강의로 풀어 주는 웹앱",
+  "type": "module",
+  "engines": { "node": ">=18" }
+}

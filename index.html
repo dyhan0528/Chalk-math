@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>칠판 수학</title>
+<meta name="description" content="한 문제를 3~5분 칠판 강의로 풀어 주는 수학 앱">
+<meta name="theme-color" content="#25463a">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="칠판 수학">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f3ee;--surf:#fff;--ink:#1c1e22;--mut:#6a6e75;--line:#e3e0d8;--acc:#1f5e47;--red:#e0312b;--pill:#ebe8e1;--pill-h:#dedad1}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+a{color:inherit}
+[hidden]{display:none!important}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(10px + env(safe-area-inset-top)) max(clamp(14px,4vw,32px),env(safe-area-inset-right)) 10px max(clamp(14px,4vw,32px),env(safe-area-inset-left));background:var(--bg);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:700;font-size:18px;letter-spacing:-.01em}
+.mark{width:38px;height:27px;border-radius:5px;background:#24453a;border:3px solid #8a6a46;display:grid;place-items:center;color:#f3f0e6;font-family:"Nanum Pen Script",cursive;font-size:19px;line-height:1}
+.top nav{display:flex;gap:8px}
+main{max-width:1120px;margin:0 auto;padding:16px max(clamp(12px,3vw,28px),env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom)) max(clamp(12px,3vw,28px),env(safe-area-inset-left))}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:38px;padding:0 16px;border-radius:19px;border:1px solid var(--line);background:var(--surf);text-decoration:none;font-weight:500;font-size:14px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:#cfcabe}
+.btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn.ghost{background:transparent}
+.btn.big{height:50px;padding:0 28px;font-size:16px;border-radius:25px}
+.btn.danger{color:#b3261e}
+.btn:disabled,.btn.off{opacity:.5;cursor:default}
+.hero h1{font-size:clamp(26px,4vw,36px);margin:12px 0 6px;letter-spacing:-.02em}
+.hero p{color:var(--mut);margin:0 0 24px;line-height:1.65;max-width:660px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:24px 18px}
+.card{text-decoration:none;display:block;min-width:0}
+.thumb{position:relative;aspect-ratio:16/9;border-radius:12px;background:#24453a;border:5px solid #8a6a46;color:#f3f0e6;overflow:hidden;padding:10px 14px;transition:transform .15s}
+.card:hover .thumb{transform:translateY(-2px)}
+.tunit{display:inline-block;font-size:11px;background:rgba(255,255,255,.14);padding:2px 8px;border-radius:10px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ttitle{font-family:"Nanum Pen Script",cursive;font-size:30px;line-height:1.05;margin-top:6px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.dur{position:absolute;right:8px;bottom:8px;background:rgba(0,0,0,.78);color:#fff;font-size:12px;padding:2px 6px;border-radius:4px;font-weight:500}
+.cmeta{padding:10px 2px 0}
+.ctitle{font-weight:700;font-size:15px;line-height:1.4}
+.csub{color:var(--mut);font-size:13px;margin-top:3px}
+.thumb.new{background:transparent;border:2px dashed #b9b4a8;color:var(--acc);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-weight:700}
+.thumb.new .plus{font-size:42px;line-height:1;font-weight:400}
+.thumb.new small{font-weight:400;color:var(--mut)}
+.note{color:var(--mut);font-size:13px;margin-top:24px;line-height:1.6}
+.back{display:inline-block;margin:2px 0 12px;color:var(--mut);text-decoration:none;font-size:14px}
+.back:hover{color:var(--ink)}
+.player{background:var(--surf);border:1px solid var(--line);border-radius:16px;padding:10px 10px 12px}
+.stage{position:relative;aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:var(--paper);user-select:none;-webkit-user-select:none}
+.stage svg{display:block;width:100%;height:100%}
+.theme-note{--paper:#fdfdfb;--rule:#d5dde8;--c-black:#22252a;--c-red:#d6332f;--c-blue:#2b5ec4;--c-green:#23834f;--c-orange:#e5761a;--c-purple:#6a4bc4;--fill-purple:rgba(127,119,221,.26);--fill-green:rgba(29,158,117,.24);--fill-yellow:rgba(245,196,40,.45);--fill-blue:rgba(55,138,221,.22);--fill-red:rgba(226,75,74,.2);--fill-gray:rgba(120,120,120,.16);--thead:rgba(43,94,196,.08)}
+.theme-chalk{--paper:#25463a;--rule:rgba(255,255,255,.035);--c-black:#f3f0e6;--c-red:#ff8f85;--c-blue:#93cbff;--c-green:#a9e6a4;--c-orange:#ffc27a;--c-purple:#cfbcff;--fill-purple:rgba(190,170,255,.24);--fill-green:rgba(140,230,180,.2);--fill-yellow:rgba(255,222,110,.28);--fill-blue:rgba(140,200,255,.2);--fill-red:rgba(255,140,130,.2);--fill-gray:rgba(255,255,255,.1);--thead:rgba(255,255,255,.07)}
+.pen{font-family:"Nanum Pen Script","Gaegu","Apple SD Gothic Neo",cursive}
+.theme-chalk .pencil,.theme-note .chalkstick{display:none}
+.stagewrap{position:relative}
+.theme-chalk::after{content:"";position:absolute;inset:0;border:9px solid #8a6a46;border-radius:10px;pointer-events:none}
+.subs{position:absolute;left:50%;bottom:3.2%;transform:translateX(-50%);max-width:88%;width:max-content;background:rgba(14,14,14,.8);color:#fff;padding:.32em .75em;border-radius:6px;font-size:clamp(12px,1.85vw,19px);line-height:1.45;text-align:center;pointer-events:none}
+.ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(253,253,251,.6);text-align:center;padding:16px}
+.theme-chalk .ov{background:rgba(18,38,30,.6);color:#f3f0e6}
+.bigplay{width:clamp(60px,9vw,86px);height:clamp(60px,9vw,86px);border-radius:50%;border:0;background:var(--red);color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 22px rgba(224,49,43,.32);transition:transform .12s}
+.bigplay:hover{transform:scale(1.05)}
+.ovtitle{font-family:"Nanum Pen Script",cursive;font-size:clamp(26px,4.4vw,50px);line-height:1.1;max-width:90%}
+.ovsub{font-size:clamp(12px,1.6vw,15px);opacity:.75}
+.ovrow{display:flex;gap:8px}
+.prog{position:relative;display:flex;gap:3px;align-items:center;height:20px;margin:8px 4px 4px;cursor:pointer;touch-action:none}
+.seg{position:relative;height:5px;background:#dad7cf;border-radius:3px;overflow:hidden;transition:height .12s;min-width:6px}
+.prog:hover .seg,.prog.drag .seg{height:8px}
+.seg i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--red)}
+.pop{position:absolute;bottom:24px;transform:translateX(-50%);background:#1c1e22;color:#fff;font-size:12px;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none}
+.ctrls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:2px 2px 0}
+.pill{height:40px;min-width:40px;border:0;border-radius:20px;background:var(--pill);display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:0 13px;cursor:pointer;font-size:14px;font-weight:500;text-decoration:none;white-space:nowrap}
+.pill:hover{background:var(--pill-h)}
+.pill.icon{padding:0;width:40px}
+.pill.grp{padding:0 3px;gap:0}
+.pill.grp button{border:0;background:transparent;width:36px;height:40px;display:grid;place-items:center;cursor:pointer;border-radius:18px}
+.pill.grp button:hover{background:var(--pill-h)}
+.pill.off{opacity:.5}
+.pill.time{cursor:default;font-variant-numeric:tabular-nums}
+.pill.chap{max-width:220px;overflow:hidden}
+.pill.chap span{overflow:hidden;text-overflow:ellipsis}
+.sp{flex:1}
+.info{padding:18px 4px 0}
+.info h2{font-size:21px;margin:0 0 6px;letter-spacing:-.01em}
+.meta{color:var(--mut);font-size:14px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.answer{background:#fff6e9;border:1px solid #f1d9b5;border-radius:12px;padding:12px 16px;line-height:1.7;margin-bottom:6px}
+.info h3{font-size:15px;margin:18px 0 8px}
+.chlist{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.chlist button{width:100%;text-align:left;border:1px solid var(--line);background:var(--surf);border-radius:12px;padding:10px 12px;cursor:pointer;display:flex;gap:10px;align-items:baseline}
+.chlist button:hover{border-color:#cfcabe}
+.chlist li.on button{border-color:var(--red);background:#fff5f4}
+.chlist .ct{color:var(--red);font-size:13px;font-variant-numeric:tabular-nums;font-weight:700}
+.newwrap{max-width:720px}
+.newwrap h1{font-size:clamp(24px,3.6vw,32px);margin:4px 0 6px;letter-spacing:-.02em}
+.lead{color:var(--mut);margin:0 0 20px;line-height:1.65}
+.vh{position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0}
+.herobtns{display:flex;gap:10px;flex-wrap:wrap;margin:-6px 0 26px}
+.cam-only{display:none!important}
+body.touch .cam-only{display:inline-flex!important}
+body.touch small.cam-only{display:block!important}
+body.touch .desk-only{display:none!important}
+.pickbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.pickbtns.small{margin-top:12px}
+.filebtn{position:relative;overflow:hidden;cursor:pointer}
+.filebtn input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0;padding:0}
+.filebtn.off input{pointer-events:none}
+.pulse{animation:pulse 1.2s ease-in-out 3;outline:3px solid rgba(31,94,71,.35)}
+@keyframes pulse{50%{transform:scale(1.04)}}
+#dropInner small{display:block;margin-top:12px}
+.drop{display:block;border:2px dashed #b9b4a8;border-radius:14px;background:var(--surf);padding:24px 16px;text-align:center;transition:background .15s,border-color .15s}
+.drop.over{border-color:var(--acc);background:#eef5f1}
+.drop b{display:block;font-size:16px;margin:6px 0 4px}
+.drop small{color:var(--mut)}
+.drop img{max-width:100%;max-height:380px;border-radius:8px;display:block;margin:0 auto}
+.fld{display:block;margin-top:18px}
+.fld>span{display:block;font-size:14px;font-weight:500;margin-bottom:6px}
+textarea,input.txt{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font:inherit;font-size:15px;background:var(--surf);color:var(--ink);resize:vertical}
+textarea:focus,input.txt:focus{outline:2px solid rgba(31,94,71,.25);border-color:var(--acc)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:20px}
+.genstat{margin-top:18px;padding:14px 16px;border-radius:12px;background:#eef5f1;display:flex;gap:14px;align-items:center;line-height:1.5}
+.genstat small{color:var(--mut)}
+.spin{width:26px;height:26px;border-radius:50%;border:3px solid rgba(31,94,71,.2);border-top-color:var(--acc);animation:sp 0.9s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.err{color:#b3261e;margin:14px 0 0;line-height:1.6;background:#fdeceb;border:1px solid #f3c4c0;border-radius:12px;padding:12px 14px}
+.capnote{background:#fff6e9;border:1px solid #f1d9b5;border-radius:12px;padding:12px 14px;line-height:1.65;margin-bottom:14px;font-size:14px}
+.tips{color:var(--mut);font-size:13px;line-height:1.8;margin:18px 0 0;padding-left:18px}
+.install{display:flex;align-items:center;gap:12px;background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:12px 12px 12px 14px;margin:-8px 0 22px}
+.install img{border-radius:10px;flex:none}
+.install .imsg{flex:1;font-size:14px;line-height:1.55}
+.btn.icon{width:38px;padding:0}
+.homefoot{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:26px}
+.homefoot .note{margin:0}
+.keybox{background:var(--surf);border:1.5px solid var(--acc);border-radius:14px;padding:16px;margin-bottom:16px}
+.keybox>b{font-size:16px}
+.keybox p{color:var(--mut);font-size:14px;line-height:1.6;margin:6px 0 0}
+.keybox .fld{margin-top:12px}
+.keybox small{display:block;color:var(--mut);margin-top:6px;line-height:1.5}
+.keybox .row{margin-top:14px}
+.ksteps{list-style:none;padding:0;margin:14px 0 4px;display:flex;flex-direction:column;gap:10px}
+.ksteps li{display:flex;flex-direction:column;gap:4px}
+.ksteps .btn{height:46px;font-size:15px;justify-content:center}
+.ksteps small{margin:0!important}
+.keybox select{width:100%;height:44px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font:inherit;font-size:15px;background:var(--surf);color:var(--ink)}
+.adv{margin-top:12px;font-size:14px;color:var(--mut)}
+.adv summary{cursor:pointer}
+.adv input{margin-top:8px}
+.linkbtn{border:0;background:transparent;color:var(--acc);text-decoration:underline;font-weight:700;cursor:pointer;padding:0 2px}
+.subnote{font-size:13px;color:var(--mut);margin-top:4px}
+#fileNote{margin:-8px 0 22px}
+.passtop{margin:0 0 16px}
+.capnote.ok{background:#eef5f1;border-color:#cfe3d8}
+.capnote.warn{background:#fff6e9;border-color:#f1d9b5}
+.modal{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;padding:16px}
+.sheet{background:var(--surf);border-radius:16px;padding:18px;max-width:520px;width:100%;margin-bottom:env(safe-area-inset-bottom)}
+.sheet h3{margin:0 0 6px}
+.sheet p{color:var(--mut);font-size:14px;line-height:1.6;margin:0 0 10px}
+.sheet textarea{font-size:13px;word-break:break-all}
+.sheet .row{margin-top:12px}
+.vwait{position:absolute;right:2.5%;top:3.5%;display:flex;align-items:center;gap:6px;background:rgba(20,20,20,.72);color:#fff;font-size:clamp(11px,1.5vw,14px);padding:.3em .8em;border-radius:20px;pointer-events:none}
+.vwait .dot{width:8px;height:8px;border-radius:50%;background:#7fd1a8;animation:vw 1s ease-in-out infinite}
+@keyframes vw{50%{opacity:.25}}
+.voicebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;margin:-4px 0 14px;color:var(--mut)}
+.voicebar b{color:var(--ink);font-weight:500}
+.sheet{max-height:86vh;overflow:auto}
+.seg2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 12px}
+.segbtn{border:1.5px solid var(--line);background:var(--surf);border-radius:12px;padding:10px 8px;cursor:pointer;font-weight:700;font-size:15px;display:flex;flex-direction:column;gap:2px;align-items:center}
+.segbtn small{font-weight:400;font-size:12px;color:var(--mut)}
+.segbtn.on{border-color:var(--acc);background:#eef5f1;color:var(--acc)}
+.vnote{color:var(--mut);font-size:13px;line-height:1.6;margin:0 0 10px}
+.vlist{display:flex;flex-direction:column;gap:6px}
+.vitem{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:12px;padding:4px 4px 4px 0}
+.vitem.on{border-color:var(--acc);background:#eef5f1}
+.vpick{flex:1;text-align:left;border:0;background:transparent;padding:8px 12px;cursor:pointer;display:flex;flex-direction:column;gap:1px;min-width:0}
+.vpick small{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vplay{border:0;background:var(--pill);border-radius:18px;height:36px;padding:0 12px;cursor:pointer;font-size:13px;white-space:nowrap}
+.vitem.loading .vplay{opacity:.5;pointer-events:none}
+.vitem.loading .vplay::after{content:"…"}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1c1e22;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;max-width:92vw;text-align:center;line-height:1.5}
+@media (max-width:620px){.herobtns .btn,.pickbtns:not(.small) .btn{flex:1 1 100%}.drop{padding:18px 12px}.subs{position:static;transform:none;width:auto;max-width:none;margin-top:8px;border-radius:8px;font-size:14px;text-align:left;padding:8px 12px;background:#1c1e22}.pill.chap{display:none}.pill{height:36px;min-width:36px;padding:0 10px}.pill.icon{width:36px}.pill.grp button{width:32px;height:36px}.ctrls{gap:6px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#home"><span class="mark">수</span><span>칠판 수학</span></a>
+  <nav><a class="btn ghost" href="#home">강의 목록</a><a class="btn primary" href="#new">+ 새 강의</a></nav>
+</header>
+<main>
+  <section id="v-home">
+    <div class="hero">
+      <h1>한 문제, 한 강의</h1>
+      <p>선생님이 칠판에 적어 가며 한 문제를 3~5분 동안 풀어 줘요. 그림부터 그리고, 열쇠가 되는 생각을 먼저 짚고, 계산은 한 줄에 한 단계씩. 문제 사진을 올리면 새 강의도 만들 수 있어요.</p>
+      <div class="herobtns">
+        <span class="btn primary big cam-only filebtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.6"/></svg>사진 찍어서 강의 만들기<input type="file" accept="image/*" capture="environment" data-kind="cam" aria-label="카메라로 찍기"></span>
+        <a href="#new" class="btn big"><span class="cam-only">사진 고르기 · 글로 적기</span><span class="desk-only">사진으로 강의 만들기</span></a>
+      </div>
+    </div>
+    <div class="install" id="installCard" hidden>
+      <img src="/icons/icon-192.png" alt="" width="44" height="44">
+      <div class="imsg" id="installMsg"></div>
+      <button class="btn primary" id="bInstall" hidden>설치</button>
+      <button class="btn ghost icon" id="bInstallX" aria-label="닫기">✕</button>
+    </div>
+    <div class="capnote warn" id="fileNote" hidden></div>
+    <div class="grid" id="grid"></div>
+    <div class="homefoot">
+      <span class="btn filebtn">강의 파일 가져오기<input type="file" accept=".json,application/json" id="importIn" multiple aria-label="강의 파일 가져오기"></span>
+      <span class="note" id="dbNote">내가 만든 강의는 이 기기에 저장돼요. 다른 사람에게는 강의 화면의 ‘공유 링크’로 보내 주세요.</span>
+    </div>
+  </section>
+
+  <section id="v-player" hidden>
+    <a class="back" href="#home">← 강의 목록</a>
+    <div class="player">
+      <div class="stagewrap">
+      <div class="stage theme-note" id="stage">
+        <svg id="board" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet" aria-label="칠판">
+          <rect x="0" y="0" width="1600" height="900" style="fill:var(--paper)"/>
+          <g id="rules"></g>
+          <g id="L-fill"></g><g id="L-line"></g><g id="L-lab"></g><g id="L-board"></g>
+          <g id="pen" style="display:none" pointer-events="none">
+            <g class="pencil" transform="scale(1.25)">
+              <path d="M0 0 L7 -15 L15 -9 Z" fill="#ecd0aa"/>
+              <path d="M0 0 L2.6 -5.6 L5.6 -3.4 Z" fill="#2b2b2b"/>
+              <path d="M7 -15 L15 -9 L60 -68 L52 -74 Z" fill="#f4b73a"/>
+              <path d="M7 -15 L11 -12 L56 -71 L52 -74 Z" fill="#e39a1f"/>
+              <path d="M52 -74 L60 -68 L67 -77 L59 -83 Z" fill="#e66a6a"/>
+            </g>
+            <g class="chalkstick" transform="scale(1.25)">
+              <path d="M0 0 L4 -10 L50 -62 L58 -55 L12 -3 Z" fill="#f4f1e8"/>
+              <path d="M0 0 L4 -10 L12 -3 Z" fill="#d9d4c4"/>
+            </g>
+          </g>
+        </svg>
+        <div class="vwait" id="vwait" hidden><span class="dot"></span>목소리 준비 중…</div>
+        <div class="ov" id="ovStart">
+          <button class="bigplay" id="bigPlay" aria-label="강의 시작"><svg viewBox="0 0 24 24" width="40%" height="40%"><path d="M7 4.5v15l13-7.5z" fill="currentColor"/></svg></button>
+          <div class="ovtitle" id="ovTitle"></div>
+          <div class="ovsub" id="ovSub"></div>
+        </div>
+        <div class="ov" id="ovEnd" hidden>
+          <div class="ovtitle">수업 끝! 수고했어</div>
+          <div class="ovrow"><button class="pill" id="bReplay">다시 보기</button><a class="pill" href="#home">다른 강의</a></div>
+        </div>
+      </div>
+      <div class="subs" id="subs" hidden></div>
+      </div>
+      <div class="prog" id="prog"><div class="pop" id="pop" hidden></div></div>
+      <div class="ctrls">
+        <button class="pill icon" id="bPlay" aria-label="재생"></button>
+        <div class="pill grp"><button id="bPrev" aria-label="이전 챕터"></button><button id="bNext" aria-label="다음 챕터"></button></div>
+        <button class="pill icon" id="bVoice" aria-label="목소리 켜기/끄기"></button>
+        <div class="pill time" id="time">0:00 / 0:00</div>
+        <button class="pill chap" id="bChap"><span id="chapName"></span><span>›</span></button>
+        <span class="sp"></span>
+        <button class="pill icon" id="bCC" aria-label="자막 켜기/끄기"></button>
+        <button class="pill" id="bSpeed" aria-label="재생 속도">1x</button>
+        <button class="pill" id="bTheme" aria-label="칠판/공책 바꾸기">공책</button>
+      </div>
+    </div>
+    <div class="info">
+      <h2 id="pTitle"></h2>
+      <div class="meta" id="pMeta"></div>
+      <div class="actions">
+        <button class="btn" id="bAnswer">정답 보기</button>
+        <button class="btn primary" id="bSave" hidden>내 목록에 저장</button>
+        <button class="btn ghost" id="bShare">공유 링크</button>
+        <button class="btn ghost" id="bExport">파일로 저장</button>
+        <button class="btn ghost danger" id="bDel" hidden>강의 삭제</button>
+      </div>
+      <div class="voicebar"><span>목소리</span><b id="voiceLabel"></b><button class="linkbtn" id="bVoiceSet">바꾸기</button></div>
+      <div class="answer" id="pAnswer" hidden></div>
+      <h3 id="chHead">챕터</h3>
+      <ol class="chlist" id="chlist"></ol>
+    </div>
+  </section>
+
+  <section id="v-new" hidden>
+    <a class="back" href="#home">← 강의 목록</a>
+    <div class="newwrap">
+      <h1>새 문제 강의 만들기</h1>
+      <p class="lead">문제 사진을 올리면 AI 선생님이 칠판 강의 대본을 써요. 그림 그리기, 핵심 아이디어, 한 줄씩 계산, 정답과 요령까지 3~5분 강의로 만들어 줘요. 30초~2분쯤 걸려요.</p>
+      <div class="capnote" id="aiNote" hidden></div>
+      <div class="keybox" id="keyBox" hidden>
+        <b>AI 키 넣기</b>
+        <p>AI API 키를 넣으면 이 휴대폰에서 바로 강의를 만들 수 있어요. 키는 이 기기에만 저장되고, 고른 AI 회사로만 보내져요.</p>
+        <label class="fld"><span>AI 고르기</span>
+          <select id="kProv"><option value="gemini">Google Gemini (추천)</option><option value="openai">OpenAI (ChatGPT)</option><option value="anthropic">Claude API</option></select>
+        </label>
+        <ol class="ksteps">
+          <li><a class="btn primary" id="kGet" href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">① 구글에서 키 받기 ↗</a><small>구글 로그인 → <b>Create API key</b> → 복사</small></li>
+          <li><button class="btn primary" id="bKeyPaste" type="button">② 복사한 키 붙여넣기</button><small>붙여 넣으면 자동으로 저장돼요</small></li>
+        </ol>
+        <label class="fld"><span>API 키</span><input class="txt" id="kKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="AIza로 시작하는 키 (직접 붙여 넣어도 돼요)"></label>
+        <small id="kHelp"></small>
+        <details class="adv"><summary>모델 바꾸기 (보통은 비워 두세요)</summary><input class="txt" id="kModel" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="비워 두면 gemini-flash-latest"></details>
+        <div class="row"><button class="btn primary" id="bKeySave">저장</button><button class="btn ghost" id="bKeyCancel" hidden>취소</button><button class="btn ghost danger" id="bKeyDel" hidden>키 지우기</button></div>
+      </div>
+      <label class="fld passtop" id="passFld" hidden><span>강의 만들기 비밀번호</span><input class="txt" id="qPass" type="password" autocomplete="current-password" placeholder="선생님이 알려 준 비밀번호"></label>
+      <div class="drop" id="drop">
+        <div id="dropInner">
+          <div class="pickbtns">
+            <span class="btn primary big cam-only filebtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.6"/></svg>카메라로 찍기<input type="file" accept="image/*" capture="environment" data-kind="cam" aria-label="카메라로 찍기"></span>
+            <span class="btn big filebtn" data-pick="1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10.5" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg>사진 고르기<input type="file" accept="image/*" data-kind="file" aria-label="사진 고르기"></span>
+          </div>
+          <small class="cam-only">찍으면 바로 강의 만들기가 시작돼요</small>
+          <small class="desk-only">사진을 여기에 끌어다 놓거나 붙여 넣어도 돼요</small>
+        </div>
+        <div id="previewBox" hidden>
+          <img id="preview" alt="올린 문제 사진">
+          <div class="pickbtns small"><span class="btn cam-only filebtn">다시 찍기<input type="file" accept="image/*" capture="environment" data-kind="cam" aria-label="카메라로 찍기"></span><span class="btn filebtn" data-pick="1">다른 사진<input type="file" accept="image/*" data-kind="file" aria-label="사진 고르기"></span><button class="btn ghost" id="bClearImg">사진 지우기</button></div>
+        </div>
+      </div>
+      <div class="capnote" id="camHint" hidden>카메라가 바로 열리지 않으면 <b>사진 고르기</b> 버튼을 눌러 보세요. 고르는 창에서 <b>사진 찍기</b>를 고를 수 있어요. 카카오톡 안에서 열었다면 오른쪽 위 메뉴의 <b>다른 브라우저로 열기</b>를 눌러 주세요.</div>
+      <div class="genstat" id="genStat" hidden><div class="spin"></div><div><div id="genMsg">문제를 읽는 중…</div><small id="genSub"></small></div></div>
+      <p class="err" id="genErr" hidden></p>
+      <label class="fld"><span>또는 문제를 글로 적기</span><textarea id="qText" rows="4" placeholder="예) 주사위 두 개를 동시에 던질 때, 나온 눈의 합이 7일 확률은?"></textarea></label>
+      <label class="fld"><span>선생님께 한마디 (선택)</span><input class="txt" id="qMemo" placeholder="예) 닮음 단원 방법으로 풀어 주세요"></label>
+      <div class="row"><button class="btn primary big" id="bGen">강의 만들기</button><button class="btn ghost" id="bCancel" hidden>그만두기</button></div>
+      <ul class="tips">
+        <li>사진은 문제 하나만 나오게 잘라 주면 더 정확해요. 그림이 있으면 그림까지 나오게 찍어 주세요.</li>
+        <li>만든 강의는 이 기기의 강의 목록에 저장돼요. 대본이 마음에 들지 않으면 지우고 다시 만들면 돼요.</li>
+        <li>AI가 만든 풀이는 틀릴 수 있어요. 학생에게 보내기 전에 한 번 확인해 주세요.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+<div class="modal" id="shareModal" hidden>
+  <div class="sheet">
+    <h3>공유 링크</h3>
+    <p>아래 링크를 길게 눌러 복사해서 카톡이나 문자로 보내 주세요. 링크를 연 사람은 이 강의를 바로 볼 수 있어요.</p>
+    <textarea id="shareUrl" rows="4" readonly></textarea>
+    <div class="row"><button class="btn primary" id="bShareCopy">복사</button><button class="btn" id="bShareClose">닫기</button></div>
+  </div>
+</div>
+<div class="modal" id="voiceModal" hidden>
+  <div class="sheet">
+    <h3>목소리 고르기</h3>
+    <div class="seg2"><button class="segbtn" id="vmAI">AI 목소리<small>사람처럼 자연스러워요</small></button><button class="segbtn" id="vmDev">기기 목소리<small>휴대폰 기본 목소리</small></button></div>
+    <div id="vAIBox"><p class="vnote" id="vAINote"></p><div class="vlist" id="vAIList"></div></div>
+    <div id="vDevBox" hidden><div class="vlist" id="vDevList"></div></div>
+    <div class="row"><button class="btn primary" id="bVoiceDone">확인</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script>
+/* 선생님 서버 주소 — 파일로 열어도 이 서버로 강의를 만들고 목소리를 받아요. 예: "https://chalk-math.vercel.app" */
+window.CHALK_SERVER = "";
+</script>
+<script>
+/* ===== 강의 데이터 + 타임라인 엔진 (DOM 없음) ===== */
+const PEN_FONT = '"Nanum Pen Script", "Gaegu", "Apple SD Gothic Neo", cursive';
+const SZ = { h: 60, n: 50, s: 42 };
+const BRD = { x: 80, top: 124, lh: 66, maxRow: 10.2, splitW: 740, fullW: 1440 };
+const FIG = { x: 850, y: 58, s: 7 };
+const POS = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0], ne: [0.72, -0.72], nw: [-0.72, -0.72], se: [0.72, 0.72], sw: [-0.72, 0.72] };
+const COLORS = ["black", "red", "blue", "green", "orange", "purple"];
+const FILLS = ["yellow", "purple", "green", "blue", "red", "gray"];
+const SAY_RATE = 0.155; // 한 글자 읽는 데 걸리는 대략적인 시간(초)
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const unit = (v, fb) => { const l = Math.hypot(v[0], v[1]); return l < 1e-6 ? (fb || [1, 0]) : [v[0] / l, v[1] / l]; };
+const fmtTime = s => { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+
+/* ---------- 기본 강의: 뉴fine 수학 106번 ---------- */
+const L106 = {
+  id: "b106",
+  builtin: true,
+  title: "직각삼각형 속 닮음으로 넓이 구하기",
+  unit: "도형의 닮음 · 106번",
+  answer: "② 6cm²",
+  tip: "직각에서 빗변으로 수선을 내리면 닮은 삼각형 2개! (수선)² = (한쪽 조각) × (다른 조각)",
+  points: {
+    A: [77, 38], B: [5, 74], C: [95, 74], H: [77, 74], M: [50, 74],
+    a1: [2, 66], h1: [26, 66], c1: [26, 54],
+    b2: [44, 66], h2: [92, 66], a2: [92, 42]
+  },
+  chapters: [
+    { title: "문제 읽기", steps: [
+      { say: "자, 106번 문제 같이 풀어 보자. 문제를 한 줄씩 읽으면서 그림도 하나씩 그려 볼게.",
+        board: [{ t: "106번", s: "h", c: "blue" }] },
+      { say: "각 A가 90도인 직각삼각형 ABC가 있어. 왼쪽 아래가 B, 오른쪽 아래가 C, 맨 위 꼭짓점이 A야.",
+        board: [{ t: "∠A = 90° 인 직각삼각형 ABC" }],
+        fig: [{ seg: ["B", "C"] }, { seg: ["C", "A"] }, { seg: ["A", "B"] }, { lab: "B" }, { lab: "C" }, { lab: "A", pos: "n" }, { right: ["B", "A", "C"] }] },
+      { say: "M은 BC의 한가운데 점이야. BM과 MC의 길이가 같다는 뜻으로, 짧은 선을 하나씩 그어 둘게.",
+        board: [{ t: "BM = MC → M은 BC의 가운데" }],
+        fig: [{ dot: "M" }, { lab: "M", pos: "s" }, { tick: ["B", "M"] }, { tick: ["M", "C"] }] },
+      { say: "그리고 A에서 BC에 수직으로 선을 내렸어. 만나는 점이 H야. AH는 4센티미터, HC는 2센티미터.",
+        board: [{ t: "AH ⊥ BC,  AH = 4,  HC = 2" }],
+        fig: [{ seg: ["A", "H"] }, { right: ["A", "H", "C"] }, { lab: "H", pos: "s" }, { txt: "4", on: ["A", "H"] }, { txt: "2", on: ["H", "C"] }] },
+      { say: "구하는 건 삼각형 AMH의 넓이야. A와 M을 이어서 생긴 삼각형, 그림에서 노란색으로 칠한 부분이지?",
+        board: [{ t: "△AMH 의 넓이는?", c: "red", u: true }],
+        fig: [{ seg: ["A", "M"], dash: true }, { poly: ["A", "M", "H"], fill: "yellow", id: "amh" }] }
+    ] },
+    { title: "핵심 아이디어", steps: [
+      { say: "풀기 전에 열쇠부터 알려 줄게. 이 문제는 직각삼각형 안에 숨어 있는 닮은 삼각형 두 개를 찾는 게 열쇠야.",
+        board: [{ gap: true }, { t: "열쇠: 숨어 있는 닮은 삼각형 2개!", c: "red", box: true }] },
+      { say: "왜냐하면 BH 길이만 알면 MH를 구할 수 있고, MH를 알면 넓이는 바로 나오거든. 지금 BH는 모르니까 물음표야.",
+        board: [{ t: "BH → MH → △AMH 넓이", c: "blue" }],
+        fig: [{ txt: "?", on: ["B", "H"], id: "bhq", c: "red" }] },
+      { say: "삼각형 넓이는 밑변 곱하기 높이 나누기 2잖아. 높이 AH는 4로 이미 주어졌으니까, 밑변 MH만 찾으면 돼.",
+        board: [{ t: "넓이 = 밑변 MH × 높이 AH ÷ 2", s: "s" }] }
+    ] },
+    { title: "닮은 삼각형 찾기", steps: [
+      { say: "자, 칠판을 넘길게. 그림을 봐. 수직선 AH가 큰 삼각형을 두 조각으로 나눴어. 보라색 삼각형 ABH, 그리고 초록색 삼각형 AHC.",
+        board: [{ clear: true }, { t: "닮은 삼각형 찾기", s: "h", c: "blue" }],
+        fig: [{ hide: "amh" }, { poly: ["A", "B", "H"], fill: "purple", id: "abh" }, { poly: ["A", "H", "C"], fill: "green", id: "ahc" }] },
+      { say: "각 B의 크기를 동그라미라고 해 볼게. 그림에 주황색 점으로 표시해 둘게.",
+        board: [{ t: "∠B = ● 라고 하면" }],
+        fig: [{ ang: ["A", "B", "H"], m: "dot" }] },
+      { say: "큰 삼각형 ABC에서 각 A가 90도니까, 각 C는 90도 빼기 동그라미가 돼.",
+        board: [{ t: "△ABC: ∠C = 90° − ●" }] },
+      { say: "이제 초록 삼각형 AHC를 봐. 각 H가 90도, 각 C가 90도 빼기 동그라미야. 그럼 남은 각 CAH는? 바로 동그라미야!",
+        board: [{ t: "△AHC: ∠CAH = ●" }],
+        fig: [{ ang: ["H", "A", "C"], m: "dot" }] },
+      { say: "그림에 동그라미가 두 군데 보이지? 두 삼각형 모두 직각 하나랑 동그라미 하나를 가지고 있어. 그래서 두 삼각형은 AA 닮음이야.",
+        board: [{ t: "직각 + ● 가 같음 → AA 닮음", c: "red" }, { t: "△ABH ∽ △CAH", c: "red", box: true }] }
+    ] },
+    { title: "BH 구하기", steps: [
+      { say: "두 삼각형을 똑같은 방향으로 돌려서 나란히 놓아 볼게. 동그라미가 둘 다 왼쪽 아래에 오도록. 먼저 초록 삼각형.",
+        board: [{ clear: true }, { t: "BH 구하기", s: "h", c: "blue" }],
+        fig: [{ figclear: true }, { poly: ["a1", "h1", "c1"], fill: "green" }, { seg: ["a1", "h1"] }, { seg: ["h1", "c1"] }, { seg: ["c1", "a1"] },
+              { right: ["a1", "h1", "c1"] }, { ang: ["c1", "a1", "h1"], m: "dot" }, { lab: "a1", text: "A", pos: "w" }, { lab: "h1", text: "H", pos: "se" }, { lab: "c1", text: "C", pos: "n" }] },
+      { say: "초록 삼각형은 밑변 AH가 4, 세로 HC가 2야. 밑변이 세로의 딱 2배지?",
+        board: [{ t: "초록: 밑변 4, 세로 2 → 밑변 = 세로 × 2" }],
+        fig: [{ txt: "4", on: ["a1", "h1"], side: "s" }, { txt: "2", on: ["h1", "c1"], side: "e" }] },
+      { say: "이번엔 보라 삼각형. 밑변이 BH, 세로가 AH, 4야. 모양이 똑같으니까, 여기서도 밑변이 세로의 2배여야 해.",
+        board: [{ t: "보라: 밑변 BH, 세로 4 → BH = 4 × 2" }],
+        fig: [{ poly: ["b2", "h2", "a2"], fill: "purple" }, { seg: ["b2", "h2"] }, { seg: ["h2", "a2"] }, { seg: ["a2", "b2"] }, { right: ["b2", "h2", "a2"] },
+              { ang: ["a2", "b2", "h2"], m: "dot" }, { lab: "b2", text: "B", pos: "w" }, { lab: "h2", text: "H", pos: "se" }, { lab: "a2", text: "A", pos: "n" },
+              { txt: "BH", on: ["b2", "h2"], side: "s", c: "red" }, { txt: "4", on: ["h2", "a2"], side: "e" }] },
+      { say: "시험지에는 비례식으로 쓰면 돼. 밑변 대 세로의 비가 같으니까, BH 대 4는 4 대 2.",
+        board: [{ t: "BH : 4 = 4 : 2" }] },
+      { say: "비례식에서는 바깥쪽끼리 곱한 값과 안쪽끼리 곱한 값이 같아. 그래서 BH 곱하기 2는 4 곱하기 4, 16이야.",
+        board: [{ t: "BH × 2 = 4 × 4 = 16" }] },
+      { say: "양쪽을 2로 나누면, BH는 8! 드디어 찾았다.",
+        board: [{ t: "BH = 8", c: "red", s: "h", box: true }] }
+    ] },
+    { title: "MH 구하기", steps: [
+      { say: "다시 원래 그림으로 돌아가자. 물음표였던 BH 자리에 8을 써 넣을게.",
+        board: [{ clear: true }, { t: "MH 구하기", s: "h", c: "blue" }],
+        fig: [{ figrestore: true }, { hide: "bhq" }, { txt: "8", on: ["B", "H"], c: "red" }] },
+      { say: "BC 전체 길이는 BH 8에 HC 2를 더한 거니까 10이야.",
+        board: [{ t: "BC = 8 + 2 = 10" }] },
+      { say: "M은 BC의 한가운데니까, MC는 10의 절반인 5.",
+        board: [{ t: "MC = 10 ÷ 2 = 5" }] },
+      { say: "그림을 봐. M이 H보다 B 쪽에 있지? 그래서 MH는 MC에서 HC를 빼면 돼. 5 빼기 2는 3.",
+        board: [{ t: "MH = 5 − 2 = 3", c: "red", box: true }],
+        fig: [{ hide: "abh" }, { hide: "ahc" }, { show: "amh" }, { txt: "3", on: ["M", "H"], side: "n", c: "red" }] }
+    ] },
+    { title: "넓이와 정답", steps: [
+      { say: "이제 노란 삼각형 AMH의 넓이를 구하자. AH가 BC에 수직이니까, 밑변은 MH, 높이는 AH 그대로야.",
+        board: [{ gap: true }, { t: "△AMH: 밑변 3, 높이 4" }],
+        fig: [{ seg: ["M", "H"], c: "red" }, { seg: ["A", "H"], c: "red" }] },
+      { say: "밑변 3 곱하기 높이 4는 12, 나누기 2를 하면 6. 그러니까 정답은 2번, 6 제곱센티미터야.",
+        board: [{ t: "넓이 = 3 × 4 ÷ 2 = 6" }, { t: "답: ② 6cm²", c: "red", s: "h", box: true }] }
+    ] },
+    { title: "오늘의 요령", steps: [
+      { say: "마지막으로 오늘의 요령! 직각인 꼭짓점에서 빗변으로 수선을 내리면, 닮은 삼각형이 두 개 생겨.",
+        board: [{ clear: true }, { t: "오늘의 요령", s: "h", c: "blue" }, { t: "직각에서 빗변으로 수선 → 닮은 △ 2개" }] },
+      { say: "그래서 수선의 제곱은, 빗변의 두 조각을 곱한 값과 같아. 이 문제에서는 4의 제곱 16이, 8 곱하기 2와 같지.",
+        board: [{ t: "(수선)² = (한쪽 조각) × (다른 조각)", c: "red", box: true }, { t: "4² = 8 × 2 = 16" }] },
+      { say: "비슷한 문제를 만나면, 숨어 있는 닮은 삼각형부터 찾아봐. 오늘 수업은 여기까지! 수고했어.",
+        board: [{ t: "→ 숨은 닮음부터 찾기!", c: "blue" }] }
+    ] }
+  ]
+};
+const BUILTIN = [L106];
+
+/* ---------- AI가 만든 대본 검사·정리 ---------- */
+function normalizeLecture(raw) {
+  if (!raw || typeof raw !== "object") throw new Error("대본 형식이 아니에요.");
+  const str = v => (typeof v === "string" ? v.trim() : "");
+  const L = { title: str(raw.title).slice(0, 60) || "새 강의", unit: str(raw.unit).slice(0, 40), answer: str(raw.answer).slice(0, 80), tip: str(raw.tip).slice(0, 160), points: {}, chapters: [] };
+  if (raw.points && typeof raw.points === "object" && !Array.isArray(raw.points)) {
+    for (const k of Object.keys(raw.points).slice(0, 80)) {
+      const p = raw.points[k];
+      if (Array.isArray(p) && p.length >= 2 && isFinite(p[0]) && isFinite(p[1])) L.points[String(k)] = [clamp(+p[0], 0, 100), clamp(+p[1], 0, 100)];
+    }
+  }
+  const okP = n => (typeof n === "string" && !!L.points[n]) || (Array.isArray(n) && n.length === 2 && isFinite(n[0]) && isFinite(n[1]));
+  const okArr = (a, n) => Array.isArray(a) && a.length === n && a.every(x => typeof x === "string" && L.points[x]);
+  const col = c => (COLORS.includes(c) ? c : undefined);
+  const ids = new Set();
+  for (const ch of (Array.isArray(raw.chapters) ? raw.chapters : []).slice(0, 10)) {
+    const steps = [];
+    for (const s of (Array.isArray(ch && ch.steps) ? ch.steps : []).slice(0, 14)) {
+      if (!s || typeof s !== "object") continue;
+      const say = str(s.say).slice(0, 400);
+      const board = [];
+      for (const b of (Array.isArray(s.board) ? s.board : []).slice(0, 10)) {
+        if (!b || typeof b !== "object") continue;
+        if (b.clear) board.push({ clear: true });
+        else if (b.gap) board.push({ gap: true });
+        else if (Array.isArray(b.table)) {
+          const rows = b.table.slice(0, 8).filter(Array.isArray).map(r => r.slice(0, 8).map(c => String(c == null ? "" : c).slice(0, 12)));
+          if (rows.length) board.push({ table: rows, hl: Array.isArray(b.hl) ? b.hl.filter(x => Array.isArray(x) && x.length === 2).slice(0, 40) : [], c: col(b.c) });
+        } else if (typeof b.t === "string" && b.t.trim()) {
+          board.push({ t: b.t.trim().slice(0, 70), c: col(b.c), s: ["h", "n", "s"].includes(b.s) ? b.s : "n", box: !!b.box, u: !!b.u });
+        }
+      }
+      const fig = [];
+      for (const a of (Array.isArray(s.fig) ? s.fig : []).slice(0, 16)) {
+        if (!a || typeof a !== "object") continue;
+        const o = {};
+        if (a.id != null) o.id = String(a.id).slice(0, 30);
+        if (col(a.c)) o.c = a.c;
+        if (a.figclear) fig.push({ figclear: true });
+        else if (a.figrestore) fig.push({ figrestore: true });
+        else if (a.hide != null) fig.push({ hide: String(a.hide) });
+        else if (a.show != null) fig.push({ show: String(a.show) });
+        else if (okArr(a.seg, 2)) fig.push(Object.assign(o, { seg: a.seg, dash: !!a.dash }));
+        else if (Array.isArray(a.poly) && a.poly.length >= 3 && a.poly.every(x => L.points[x])) fig.push(Object.assign(o, { poly: a.poly.slice(0, 12), fill: FILLS.includes(a.fill) ? a.fill : "yellow" }));
+        else if (typeof a.lab === "string" && L.points[a.lab]) fig.push(Object.assign(o, { lab: a.lab, text: a.text != null ? String(a.text).slice(0, 8) : undefined, pos: POS[a.pos] ? a.pos : undefined }));
+        else if (a.txt != null && okArr(a.on, 2)) fig.push(Object.assign(o, { txt: String(a.txt).slice(0, 16), on: a.on, side: POS[a.side] ? a.side : undefined }));
+        else if (a.txt != null && okP(a.at)) fig.push(Object.assign(o, { txt: String(a.txt).slice(0, 16), at: a.at, pos: POS[a.pos] ? a.pos : undefined }));
+        else if (okArr(a.right, 3)) fig.push(Object.assign(o, { right: a.right }));
+        else if (okArr(a.ang, 3)) fig.push(Object.assign(o, { ang: a.ang, m: ["dot", "arc", "arc2"].includes(a.m) ? a.m : "arc" }));
+        else if (okArr(a.tick, 2)) fig.push(Object.assign(o, { tick: a.tick, n: clamp(parseInt(a.n) || 1, 1, 3) }));
+        else if (typeof a.dot === "string" && L.points[a.dot]) fig.push(Object.assign(o, { dot: a.dot }));
+        else if (typeof a.circle === "string" && L.points[a.circle] && isFinite(a.r) && a.r > 0) fig.push(Object.assign(o, { circle: a.circle, r: clamp(+a.r, 1, 60), dash: !!a.dash }));
+        if (o.id) ids.add(o.id);
+      }
+      if (say || board.length || fig.length) steps.push({ say, board, fig });
+    }
+    if (steps.length) L.chapters.push({ title: str(ch && ch.title).slice(0, 16) || "풀이", steps });
+  }
+  if (!L.chapters.length) throw new Error("대본에 풀이 단계가 없어요.");
+  return L;
+}
+
+/* ---------- 강의 → 타임라인 ---------- */
+function actPts(a) {
+  const r = [];
+  for (const k of ["seg", "poly", "right", "ang", "tick"]) if (Array.isArray(a[k])) r.push(...a[k]);
+  if (a.txt != null && Array.isArray(a.on)) r.push(...a.on);
+  for (const k of ["lab", "dot", "circle"]) if (typeof a[k] === "string") r.push(a[k]);
+  if (a.txt != null && a.at != null) r.push(a.at);
+  return r;
+}
+
+function wrapText(str, size, maxW, measure) {
+  const fit = s => { const w = measure(s, size); return w > maxW ? { s, size: size * maxW / w, w: maxW } : { s, size, w }; };
+  const w0 = measure(str, size);
+  if (w0 <= maxW / 0.78) return [fit(str)];
+  const words = str.split(" ");
+  const lines = [];
+  let cur = "";
+  for (const w of words) {
+    const t = cur ? cur + " " + w : w;
+    if (!cur || measure(t, size) <= maxW) cur = t; else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  return lines.map(fit);
+}
+
+function compileLecture(lec, measure) {
+  const pts = lec.points || {};
+  const split = Object.keys(pts).length > 0;
+  const maxW = split ? BRD.splitW : BRD.fullW;
+  const P = n => {
+    if (Array.isArray(n)) return [FIG.x + n[0] * FIG.s, FIG.y + n[1] * FIG.s];
+    const p = pts[n];
+    return p ? [FIG.x + p[0] * FIG.s, FIG.y + p[1] * FIG.s] : null;
+  };
+
+  // 장면별 무게중심 (라벨을 바깥쪽으로 밀어낼 때 사용)
+  const scenes = [new Map()];
+  let cur = 0;
+  const stack = [];
+  const sceneOf = new Map();
+  for (const ch of lec.chapters) for (const st of ch.steps) for (const a of (st.fig || [])) {
+    if (a.figclear) { stack.push(cur); scenes.push(new Map()); cur = scenes.length - 1; }
+    else if (a.figrestore) cur = stack.length ? stack.pop() : 0;
+    sceneOf.set(a, cur);
+    for (const n of actPts(a)) { const p = P(n); if (p) scenes[cur].set(JSON.stringify(n), p); }
+  }
+  const cent = scenes.map(m => {
+    const arr = [...m.values()];
+    return arr.length ? [arr.reduce((s, p) => s + p[0], 0) / arr.length, arr.reduce((s, p) => s + p[1], 0) / arr.length] : [FIG.x + 350, FIG.y + 350];
+  });
+
+  const els = [], steps = [], chapters = [], byId = {};
+  let t = 0, row = 0, page = [], fig = [];
+  const figStack = [];
+  const mk = (o, start, dur) => { o.start = start; o.dur = Math.max(0.001, dur); o.iv = [[start, Infinity, false]]; els.push(o); return o; };
+  const isOpen = e => e.iv[e.iv.length - 1][1] === Infinity;
+  const close = (e, T) => { const last = e.iv[e.iv.length - 1]; if (last[1] === Infinity) last[1] = Math.max(T, last[0] + 0.01); };
+  const reopen = (e, T) => { if (!isOpen(e)) e.iv.push([T, Infinity, true]); };
+  const newPage = T => { for (const e of page) close(e, T); page = []; row = 0; };
+
+  lec.chapters.forEach((ch, ci) => {
+    const chStart = t;
+    ch.steps.forEach(step => {
+      const st = { start: t, say: step.say || "", ci };
+      let tb = t, tf = t;
+
+      for (const b of (step.board || [])) {
+        if (b.clear) { if (page.length) { newPage(tb); tb += 0.35; } else row = 0; continue; }
+        if (b.gap) { row += 0.6; continue; }
+        if (b.table) {
+          const rows = b.table, nr = rows.length, nc = Math.max(...rows.map(r => r.length));
+          const fs = 38;
+          let cw = 0;
+          for (const r of rows) for (const c of r) cw = Math.max(cw, measure(String(c), fs));
+          cw = clamp(cw + 30, 66, 170);
+          if (cw * nc > maxW) cw = maxW / nc;
+          const rh = 54, need = nr * rh / BRD.lh + 0.4;
+          if (row > 0 && row + need - 1 > BRD.maxRow) { newPage(tb); tb += 0.35; }
+          const dur = clamp(0.6 + nr * nc * 0.09, 1, 7);
+          const e = mk({ type: "table", layer: "board", x: BRD.x, y: BRD.top + row * BRD.lh - 46, cw, rh, nr, nc, fs, cells: rows, hl: b.hl || [], color: b.c || "black" }, tb, dur);
+          e.cellSize = rows.map(r => r.map(c => { const w = measure(String(c), fs); return w > cw - 12 ? fs * (cw - 12) / w : fs; }));
+          page.push(e); tb += dur + 0.1; row += need;
+          continue;
+        }
+        if (typeof b.t === "string") {
+          const size = SZ[b.s] || SZ.n;
+          const lines = wrapText(b.t, size, maxW, measure);
+          const need = lines.length * (b.s === "h" ? 1.1 : 1) + (b.box ? 0.3 : 0);
+          if (row > 0 && row + need - 1 > BRD.maxRow) { newPage(tb); tb += 0.35; }
+          const lineEls = [];
+          for (const ln of lines) {
+            const y = BRD.top + row * BRD.lh;
+            const dur = clamp(0.25 + [...ln.s].length * 0.07, 0.45, 2.8);
+            const e = mk({ type: "text", layer: "board", x: BRD.x, y, w: ln.w, size: ln.size, color: b.c || "black", txt: ln.s }, tb, dur);
+            page.push(e); lineEls.push(e);
+            tb += dur + 0.08;
+            row += b.s === "h" ? 1.1 : 1;
+          }
+          const f = lineEls[0], L = lineEls[lineEls.length - 1];
+          if (b.u) { const e = mk({ type: "under", layer: "board", x: L.x, y: L.y + 13, w: L.w, line: L, color: b.c || "red" }, tb, 0.35); page.push(e); tb += 0.4; }
+          if (b.box) {
+            const w = Math.max(...lineEls.map(e => e.w));
+            const top = f.y - f.size * 0.86;
+            const e = mk({ type: "box", layer: "board", x: f.x - 16, y: top, w: w + 32, h: (L.y + 17) - top, lines: lineEls, color: b.c || "red" }, tb, 0.5);
+            page.push(e); tb += 0.55; row += 0.3;
+          }
+        }
+      }
+
+      for (const a of (step.fig || [])) {
+        const cc = cent[sceneOf.get(a) || 0];
+        if (a.figclear) { for (const e of fig) close(e, tf); figStack.push(fig); fig = []; tf += 0.3; continue; }
+        if (a.figrestore) { for (const e of fig) close(e, tf); const prev = figStack.pop() || []; for (const e of prev) reopen(e, tf); fig = prev; tf += 0.3; continue; }
+        if (a.hide != null) { const e = byId[a.hide]; if (e && isOpen(e)) { close(e, tf); fig = fig.filter(x => x !== e); } tf += 0.2; continue; }
+        if (a.show != null) { const e = byId[a.show]; if (e && !isOpen(e)) { reopen(e, tf); fig.push(e); } tf += 0.2; continue; }
+        let e = null, d = 0.35;
+        if (a.seg) {
+          const p = P(a.seg[0]), q = P(a.seg[1]);
+          if (p && q) { d = clamp(Math.hypot(q[0] - p[0], q[1] - p[1]) / 700, 0.3, 0.9); e = { type: "seg", x1: p[0], y1: p[1], x2: q[0], y2: q[1], color: a.c || "black", dash: !!a.dash, wd: a.c && a.c !== "black" ? 5 : 3.4 }; }
+        } else if (a.poly) {
+          const ps = a.poly.map(P);
+          if (ps.every(Boolean)) { e = { type: "poly", pts: ps, fill: a.fill || "yellow" }; d = 0.5; }
+        } else if (a.lab != null) {
+          const p = P(a.lab);
+          if (p) { const dir = a.pos && POS[a.pos] ? POS[a.pos] : unit([p[0] - cc[0], p[1] - cc[1]], [0, 1]); e = { type: "label", x: p[0] + dir[0] * 30, y: p[1] + dir[1] * 30, txt: a.text || a.lab, size: 48, color: a.c || "black" }; d = 0.3; }
+        } else if (a.txt != null && a.on) {
+          const p = P(a.on[0]), q = P(a.on[1]);
+          if (p && q) {
+            const m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+            let n = unit([-(q[1] - p[1]), q[0] - p[0]], [0, 1]);
+            if (a.side && POS[a.side]) { const s = POS[a.side]; if (n[0] * s[0] + n[1] * s[1] < 0) n = [-n[0], -n[1]]; }
+            else if ((m[0] - cc[0]) * n[0] + (m[1] - cc[1]) * n[1] < 0) n = [-n[0], -n[1]];
+            const off = 28 + Math.min(30, String(a.txt).length * 4);
+            e = { type: "label", x: m[0] + n[0] * off, y: m[1] + n[1] * off, txt: String(a.txt), size: 44, color: a.c || "black" };
+          }
+        } else if (a.txt != null && a.at != null) {
+          const p = P(a.at);
+          if (p) { const dir = a.pos && POS[a.pos] ? POS[a.pos] : [0, 0]; e = { type: "label", x: p[0] + dir[0] * 30, y: p[1] + dir[1] * 30, txt: String(a.txt), size: 42, color: a.c || "black" }; }
+        } else if (a.right) {
+          const [p, v, q] = a.right.map(P);
+          if (p && v && q) {
+            const u = unit([p[0] - v[0], p[1] - v[1]]), w = unit([q[0] - v[0], q[1] - v[1]]), s = 20;
+            e = { type: "path", d: `M${v[0] + u[0] * s} ${v[1] + u[1] * s} L${v[0] + (u[0] + w[0]) * s} ${v[1] + (u[1] + w[1]) * s} L${v[0] + w[0] * s} ${v[1] + w[1] * s}`, color: a.c || "black", wd: 2.4 };
+            d = 0.3;
+          }
+        } else if (a.ang) {
+          const [p, v, q] = a.ang.map(P);
+          if (p && v && q) {
+            const u = unit([p[0] - v[0], p[1] - v[1]]), w = unit([q[0] - v[0], q[1] - v[1]]);
+            const sweep = u[0] * w[1] - u[1] * w[0] > 0 ? 1 : 0;
+            const arc = r => `M${v[0] + u[0] * r} ${v[1] + u[1] * r} A${r} ${r} 0 0 ${sweep} ${v[0] + w[0] * r} ${v[1] + w[1] * r}`;
+            const m = a.m || "arc";
+            const bis = unit([u[0] + w[0], u[1] + w[1]], [0, -1]);
+            e = { type: "ang", d: arc(44) + (m === "arc2" ? " " + arc(52) : ""), dot: m === "dot" ? [v[0] + bis[0] * 31, v[1] + bis[1] * 31] : null, color: a.c || "orange" };
+            d = 0.35;
+          }
+        } else if (a.tick) {
+          const p = P(a.tick[0]), q = P(a.tick[1]);
+          if (p && q) {
+            const m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2], dir = unit([q[0] - p[0], q[1] - p[1]]), n = [-dir[1], dir[0]], k = a.n || 1;
+            let dd = "";
+            for (let i = 0; i < k; i++) { const o = (i - (k - 1) / 2) * 8, c = [m[0] + dir[0] * o, m[1] + dir[1] * o]; dd += `M${c[0] - n[0] * 11} ${c[1] - n[1] * 11} L${c[0] + n[0] * 11} ${c[1] + n[1] * 11} `; }
+            e = { type: "path", d: dd, color: a.c || "black", wd: 3 };
+            d = 0.25;
+          }
+        } else if (a.dot != null) {
+          const p = P(a.dot);
+          if (p) { e = { type: "dot", x: p[0], y: p[1], color: a.c || "black" }; d = 0.2; }
+        } else if (a.circle != null) {
+          const p = P(a.circle);
+          if (p) { e = { type: "circle", x: p[0], y: p[1], r: a.r * FIG.s, color: a.c || "black", dash: !!a.dash }; d = 1; }
+        }
+        if (e) {
+          e.layer = e.type === "poly" ? "fill" : e.type === "label" ? "lab" : "line";
+          mk(e, tf, d);
+          fig.push(e);
+          if (a.id) byId[a.id] = e;
+          tf += d + 0.06;
+        }
+      }
+
+      const est = st.say ? [...st.say].length * SAY_RATE + 0.7 : 0;
+      st.dur = Math.max(tb - t, tf - t, est, 1.2) + 0.35;
+      steps.push(st);
+      t += st.dur;
+    });
+    chapters.push({ title: ch.title, start: chStart, end: t });
+  });
+  return { els, steps, chapters, total: t, split };
+}
+
+/* ---------- AI에게 보내는 지시문 (서버 api/generate.js와 같은 내용) ---------- */
+function buildPrompt(text, memo, hasImg) {
+  const src = hasImg ? "첨부한 사진 속 수학 문제" + (text ? " (아래 글도 참고)" : "") : "아래 수학 문제";
+  return `너는 대치동에서 가장 잘 가르치기로 소문난 중학교 수학 선생님이야. 학생은 중학교 2학년이야.
+${src} 하나를, 칠판에 적어 가며 풀어 주는 3~5분짜리 강의 영상의 대본으로 만들어.
+${text ? "\n[문제]\n" + text + "\n" : ""}${memo ? "\n[요청]\n" + memo + "\n" : ""}
+## 가르치는 방식 (꼭 지켜)
+1. 첫 챕터: 문제를 칠판에 짧게 옮겨 적고, 그림이 있는 문제면 그림을 하나씩 그리면서 읽어 줘.
+2. 둘째 챕터: "이 문제는 ○○를 찾는 게 열쇠야"처럼 핵심 아이디어부터 말해.
+3. 수식보다 그림 중심으로. 보조선, 길이가 같은 변, 크기가 같은 각, 합동이거나 닮은 도형을 색칠하고 표시하면서 "그림에서 이게 보이지?" 하고 짚어 줘.
+4. 계산은 꼭 필요한 만큼만. 칠판 한 줄에 계산 한 단계만 쓰고, 그 step의 say에서 왜 그렇게 하는지 한 마디 붙여.
+5. 확률·경우의 수처럼 도형이 없는 문제도 표(table)나 나뭇가지 그림(fig)으로 경우를 먼저 다 펼쳐 보여 줘.
+6. 마지막 챕터: 정답과, 비슷한 문제에도 쓰는 요령 한 줄로 마무리.
+7. 말투는 중2가 바로 알아듣는 쉬운 반말. 친절하고 차근차근.
+
+## 분량
+- 챕터 5~7개, step은 모두 합쳐 18~32개.
+- say 전체 합계 한글 1,100~1,700자 (읽으면 3~5분).
+- step 하나의 say는 25~110자. 그림이 바뀌는 순간과 say가 맞도록 잘게 나눠.
+- say는 소리 내어 읽는 문장이야. 기호 없이 말로 써. (∠A → 각 A, △ABC → 삼각형 ABC, 4² → 4의 제곱, × → 곱하기, BM = MC → BM과 MC의 길이가 같아)
+- 칠판 글씨(t)는 짧게, 한 줄 20자 안팎. 기호를 써도 돼: × ÷ − ² ° ∠ △ ⊥ ∽ ≡ ∥ √ π
+
+## JSON 형식 (이 형식의 JSON 하나만 출력)
+{
+ "title": "강의 제목 (무엇으로 무엇을 구하는지, 25자 이내)",
+ "unit": "단원 이름",
+ "answer": "최종 정답 (객관식이면 번호와 값)",
+ "tip": "요령 한 줄",
+ "points": {"A": [x, y]},
+ "chapters": [
+  {"title": "챕터 제목(10자 이내)", "steps": [
+   {"say": "선생님 말", "board": [칠판 동작], "fig": [그림 동작]}
+  ]}
+ ]
+}
+
+### points
+- 오른쪽 그림판의 점 좌표. x, y 모두 0~100이고 y는 아래로 갈수록 커져. 5~95 안에 두고, 그림이 그림판 가운데에 크게 오도록.
+- 실제 길이와 각도 비율을 최대한 지켜 (8cm와 2cm면 길이 비가 4:1).
+- 점 이름은 문제와 같게. 보조 그림처럼 같은 이름을 다른 위치에 또 그려야 하면 다른 키("A2" 등)를 쓰고 lab의 text로 "A"라고 표시해.
+- 그림이 전혀 필요 없는 문제면 {} (그러면 칠판이 화면 전체를 써).
+
+### board 동작 (왼쪽 칠판에 위에서부터 한 줄씩 자동으로 적혀. 한 페이지에 9줄쯤)
+- {"t":"글씨", "c":"black|red|blue", "s":"h|n|s", "box":true, "u":true}  s: h=제목·정답처럼 크게, n=보통, s=작게. box=네모 강조, u=밑줄. c·s·box·u는 생략 가능.
+- {"gap":true}  한 줄 띄우기
+- {"clear":true}  칠판을 지우고 새 페이지 (챕터가 바뀔 때 주로)
+- {"table":[["", "1", "2"], ["1", "(1,1)", "(1,2)"]], "hl":[[1,2]]}  표 (최대 7행 7열). hl은 동그라미 칠 칸 [행, 열] (0부터).
+
+### fig 동작 (오른쪽 그림판, 점은 points의 이름으로)
+- {"seg":["A","B"], "dash":true, "c":"red"}  선분 (dash=점선 보조선)
+- {"poly":["A","B","C"], "fill":"yellow|purple|green|blue|red|gray", "id":"이름"}  도형 색칠
+- {"lab":"A", "text":"A", "pos":"n|s|e|w|ne|nw|se|sw"}  점 이름 쓰기 (text, pos 생략 가능)
+- {"txt":"4cm", "on":["A","H"], "side":"n|s|e|w", "c":"red", "id":"이름"}  선분 옆에 길이 등 쓰기
+- {"txt":"1/2", "at":"P", "c":"blue"}  점 P 자리에 글씨 (나뭇가지 끝의 결과 등)
+- {"right":["B","H","A"]}  직각 표시 (가운데 점이 꼭짓점)
+- {"ang":["A","B","C"], "m":"dot|arc|arc2"}  각 표시 (가운데가 꼭짓점). 크기가 같은 각끼리는 같은 m
+- {"tick":["B","M"], "n":1}  길이가 같은 선분 표시 (같은 길이끼리 같은 n)
+- {"dot":"M"}  점 찍기
+- {"circle":"O", "r":30}  원 (r도 0~100 좌표 단위)
+- {"hide":"이름"} / {"show":"이름"}  id 붙인 것 숨기기 / 다시 보이기
+- {"figclear":true} / {"figrestore":true}  그림판 잠깐 비우기 / 비우기 전 그림으로 되돌리기
+
+## 규칙
+- 그림은 그걸 설명하는 바로 그 step의 fig에 넣어. step 하나의 fig는 0~10개.
+- 나뭇가지 그림은 points에 갈래 점들을 잡고 seg와 txt(at)로 그려.
+- 정답과 모든 계산을 두 번 확인해. 틀린 풀이는 절대 안 돼.
+- 사진이 흐리거나 문제가 여러 개면 가장 크게 보이는 문제 하나만 풀어.
+- 출력은 JSON 하나. 코드펜스나 앞뒤 설명을 쓰지 마.`;
+}
+
+if (typeof module !== "undefined" && module.exports) module.exports = { L106, BUILTIN, compileLecture, normalizeLecture, fmtTime, wrapText, BRD, FIG };
+
+</script>
+<script>
+(function () {
+"use strict";
+const NS = "http://www.w3.org/2000/svg";
+const $ = id => document.getElementById(id);
+function S(tag, attrs, parent) { const e = document.createElementNS(NS, tag); if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function H(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs) { if (k === "class") e.className = attrs[k]; else if (k.startsWith("on")) e.addEventListener(k.slice(2), attrs[k]); else e.setAttribute(k, attrs[k]); }
+  for (const c of kids) if (c != null) e.append(c.nodeType ? c : String(c));
+  return e;
+}
+const ICON = {
+  play: '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M7 4.5v15l13-7.5z" fill="currentColor"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M6.5 4.5h4v15h-4zM13.5 4.5h4v15h-4z" fill="currentColor"/></svg>',
+  prev: '<svg viewBox="0 0 24 24" width="19" height="19"><path d="M6 5h2.4v14H6zM19 5v14L9.5 12z" fill="currentColor"/></svg>',
+  next: '<svg viewBox="0 0 24 24" width="19" height="19"><path d="M15.6 5H18v14h-2.4zM5 5v14l9.5-7z" fill="currentColor"/></svg>',
+  vol: '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M15.5 8.7a4.6 4.6 0 0 1 0 6.6M18.2 6.2a8.2 8.2 0 0 1 0 11.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  mute: '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M15.8 9.5l5 5M20.8 9.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  cc: '<svg viewBox="0 0 24 24" width="22" height="22"><rect x="3" y="5.5" width="18" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.2a2.2 2.2 0 1 0 0 3.6M16.8 10.2a2.2 2.2 0 1 0 0 3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>'
+};
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("chalk:" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("chalk:" + k, JSON.stringify(v)); } catch (e) {} }
+};
+const IS_WEB = /^https?:$/.test(location.protocol);
+// 선생님 서버 주소: 파일로 열어도 이 서버를 불러요. (빌드할 때 window.CHALK_SERVER에 넣어 둬요)
+const BUILT_SERVER = String(window.CHALK_SERVER || "").trim().replace(/\/+$/, "");
+try { const q = new URLSearchParams(location.search).get("server"); if (q != null) localStorage.setItem("chalk:server", JSON.stringify(q.trim().replace(/\/+$/, ""))); } catch (e) {}
+let API_BASE = null;   // "" = 같은 사이트, "https://..." = 선생님 서버, null = 연결 안 됨
+const CAN_STORE = (() => { try { localStorage.setItem("chalk:_t", "1"); localStorage.removeItem("chalk:_t"); return true; } catch (e) { return false; } })();
+let toastT = 0;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3600); }
+
+/* ---------- 글자 폭 재기 ---------- */
+const mctx = document.createElement("canvas").getContext("2d");
+const mcache = new Map();
+function measure(s, size) {
+  const k = size + "|" + s;
+  let w = mcache.get(k);
+  if (w == null) { mctx.font = `${size}px ${PEN_FONT}`; w = mctx.measureText(s).width; mcache.set(k, w); }
+  return w;
+}
+let fontsReady = false;
+const fontP = (document.fonts && document.fonts.load ? Promise.race([document.fonts.load('50px "Nanum Pen Script"', "가A1"), new Promise(r => setTimeout(r, 3500))]) : Promise.resolve())
+  .catch(() => {}).then(() => { fontsReady = true; mcache.clear(); durCache.clear(); });
+
+/* ---------- 강의 목록 (이 기기에 저장) ---------- */
+const loadMine = () => (store.get("mine", []) || []).map(x => { try { return Object.assign(normalizeLecture(x), { id: x.id, origin: "mine", created: x.created || 0, ai: x.ai || "" }); } catch (e) { return null; } }).filter(Boolean);
+let myLecs = loadMine();
+let libLecs = [];
+let tempLec = null;
+const durCache = new Map();
+const allLecs = () => [...myLecs, ...libLecs, ...BUILTIN];
+const findLec = id => (tempLec && tempLec.id === id) ? tempLec : allLecs().find(l => l.id === id);
+function durOf(L) { let d = durCache.get(L.id); if (d == null) { try { d = compileLecture(L, measure).total; } catch (e) { d = 0; } durCache.set(L.id, d); } return d; }
+const plain = L => { const { title, unit, answer, tip, points, chapters } = L; return { title, unit, answer, tip, points, chapters }; };
+function persistMine() {
+  if (!CAN_STORE) return false;
+  try { localStorage.setItem("chalk:mine", JSON.stringify(myLecs.map(L => Object.assign(plain(L), { id: L.id, created: L.created, ai: L.ai || "" })))); return true; }
+  catch (e) { toast("기기 저장 공간이 가득 찼어요. 안 쓰는 강의를 지워 주세요."); return false; }
+}
+function saveMine(L, ai) {
+  const created = Date.now();
+  const item = Object.assign(normalizeLecture(plain(L)), { id: "m-" + created.toString(36) + Math.floor(Math.random() * 1296).toString(36), origin: "mine", created, ai: ai || L.ai || "" });
+  myLecs = [item, ...myLecs];
+  persistMine();
+  return item;
+}
+
+function go(h) { if (location.hash !== "#" + h) location.hash = h; else route(); }
+function show(v) { for (const id of ["v-home", "v-player", "v-new"]) $(id).hidden = id !== v; window.scrollTo(0, 0); }
+function hashCode(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+function route() {
+  const h = location.hash.replace(/^#/, "");
+  if (h.startsWith("s=")) {
+    const code = h.slice(2), id = "t-" + hashCode(code);
+    if (tempLec && tempLec.id === id) { show("v-player"); openLecture(tempLec); return; }
+    decodeLecture(code).then(L => {
+      tempLec = Object.assign(L, { id, origin: "shared" });
+      show("v-player"); openLecture(tempLec);
+    }, () => { toast("공유 링크를 읽지 못했어요. 링크가 잘리지 않았는지 확인해 주세요."); go("home"); });
+    return;
+  }
+  if (h.startsWith("lec-")) {
+    const L = findLec(h.slice(4));
+    if (L) { show("v-player"); openLecture(L); return; }
+    leavePlayer(); show("v-home"); renderHome();
+  } else if (h === "new") { leavePlayer(); show("v-new"); checkAI(); }
+  else { leavePlayer(); show("v-home"); renderHome(); }
+}
+window.addEventListener("hashchange", route);
+
+/* ---------- 공유 링크 (강의를 주소 안에 압축해서 담기) ---------- */
+const b64u = bytes => { let s = ""; for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+const unb64u = s => { s = s.replace(/-/g, "+").replace(/_/g, "/"); while (s.length % 4) s += "="; const b = atob(s), out = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) out[i] = b.charCodeAt(i); return out; };
+async function pipeBytes(bytes, stream) { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer()); }
+async function encodeLecture(L) {
+  const bytes = new TextEncoder().encode(JSON.stringify(plain(L)));
+  if (window.CompressionStream) { try { return "z" + b64u(await pipeBytes(bytes, new CompressionStream("deflate-raw"))); } catch (e) {} }
+  return "j" + b64u(bytes);
+}
+async function decodeLecture(code) {
+  const tag = code[0], bytes = unb64u(decodeURIComponent(code.slice(1)));
+  const raw = tag === "z" ? await pipeBytes(bytes, new DecompressionStream("deflate-raw")) : bytes;
+  return normalizeLecture(JSON.parse(new TextDecoder().decode(raw)));
+}
+async function shareLecture(L) {
+  if (!IS_WEB) { toast("공유 링크는 인터넷 주소로 올린 앱에서 만들 수 있어요. 지금은 ‘파일로 저장’한 강의 파일을 보내 주세요."); return; }
+  const url = location.origin + location.pathname + "#s=" + await encodeLecture(L);
+  if (navigator.share && document.body.classList.contains("touch")) {
+    try { await navigator.share({ title: L.title, text: "칠판 수학 강의 · " + L.title, url }); return; }
+    catch (e) { if (e && e.name === "AbortError") return; }
+  }
+  let ok = false;
+  try { ok = await Promise.race([navigator.clipboard.writeText(url).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), 1500))]); } catch (e) {}
+  if (ok) toast("공유 링크를 복사했어요. 카톡이나 문자에 붙여 넣으세요.");
+  else { $("shareUrl").value = url; $("shareModal").hidden = false; }
+}
+function exportLecture(L) {
+  const blob = new Blob([JSON.stringify(plain(L), null, 1)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (L.title || "강의").replace(/[\\/:*?"<>|]/g, "").slice(0, 40) + ".json";
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+async function importFiles(files) {
+  let n = 0, bad = 0;
+  for (const f of files) {
+    try {
+      const data = JSON.parse(await f.text());
+      for (const x of (Array.isArray(data) ? data : [data])) { try { saveMine(normalizeLecture(x)); n++; } catch (e) { bad++; } }
+    } catch (e) { bad++; }
+  }
+  renderHome();
+  toast(n ? `강의 ${n}개를 가져왔어요.` + (bad ? ` (${bad}개는 읽지 못했어요)` : "") : "강의 파일을 읽지 못했어요.");
+}
+
+function renderHome() {
+  if ($("v-home").hidden) return;
+  const g = $("grid");
+  g.textContent = "";
+  g.append(H("a", { class: "card", href: "#new" },
+    H("div", { class: "thumb new" }, H("span", { class: "plus" }, "+"), "새 문제 강의 만들기", H("small", null, "문제 사진 한 장이면 돼요"))));
+  for (const L of allLecs()) {
+    const kind = L.builtin ? "기본 강의" : L.origin === "lib" ? "공유 강의" : "내가 만든 강의";
+    g.append(H("a", { class: "card", href: "#lec-" + L.id },
+      H("div", { class: "thumb" }, L.unit ? H("span", { class: "tunit" }, L.unit) : null, H("div", { class: "ttitle" }, L.title), H("span", { class: "dur" }, fmtTime(durOf(L)))),
+      H("div", { class: "cmeta" }, H("div", { class: "ctitle" }, L.title), H("div", { class: "csub" }, kind + " · 챕터 " + L.chapters.length + "개"))));
+  }
+  renderInstall();
+  const fn = $("fileNote");
+  if (!IS_WEB) {
+    fn.hidden = false;
+    fn.textContent = CAN_STORE ? "지금은 앱 파일을 직접 열어서 쓰는 중이에요. 강의 만들기·보기는 되지만, 공유 링크는 인터넷 주소(Vercel)로 올린 뒤에 쓸 수 있어요."
+      : "지금은 앱 파일을 직접 열어서 쓰는 중이에요. 이 방식에서는 만든 강의와 AI 키가 저장되지 않아요. 아끼는 강의는 ‘파일로 저장’해 두세요.";
+  } else fn.hidden = true;
+}
+
+/* ---------- 홈 화면에 설치 ---------- */
+let installEvt = null;
+const isStandalone = () => { try { return matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; } catch (e) { return false; } };
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; renderInstall(); });
+window.addEventListener("appinstalled", () => { installEvt = null; renderInstall(); toast("홈 화면에 설치했어요."); });
+function renderInstall() {
+  const c = $("installCard");
+  if (isStandalone() || store.get("installX", false)) { c.hidden = true; return; }
+  if (installEvt) { $("installMsg").textContent = "홈 화면에 설치하면 앱처럼 바로 열 수 있어요."; $("bInstall").hidden = false; c.hidden = false; }
+  else if (isIOS) {
+    const m = $("installMsg"); m.textContent = "";
+    m.append("홈 화면에 추가하면 앱처럼 쓸 수 있어요. 사파리 아래쪽 ", H("b", null, "공유"), " 버튼 → ", H("b", null, "홈 화면에 추가"), "를 눌러 주세요.");
+    $("bInstall").hidden = true; c.hidden = false;
+  } else c.hidden = true;
+}
+
+/* ---------- 플레이어 상태 ---------- */
+const P = { lec: null, comp: null, t: 0, drawnT: -1, playing: false, ended: false, drag: false, dirty: true, last: 0,
+  speed: 1, voiceFails: 0, voiceOn: store.get("voice", true), ccOn: store.get("cc", true), theme: store.get("theme", "note"), restUntil: 0,
+  sp: { step: -1, tok: 0, started: true, done: true, at: 0, hold: 0, paused: false } };
+const VOICE = { kind: null, ko: null, web: false };
+let segs = [], chItems = [], ui = {}, mountGen = 0;
+
+function stepAt(t) {
+  const st = P.comp.steps;
+  let lo = 0, hi = st.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (st[m].start <= t + 1e-9) lo = m; else hi = m - 1; }
+  return lo;
+}
+function chapterAt(t) { return P.comp.steps[stepAt(t)].ci; }
+
+function drawRules() {
+  const g = $("rules");
+  g.textContent = "";
+  for (let r = -1; r <= 11; r++) { const y = BRD.top + r * BRD.lh + 14; S("line", { x1: 40, y1: y, x2: 1560, y2: y, style: "stroke:var(--rule)", "stroke-width": 2 }, g); }
+}
+
+function mount(comp) {
+  mountGen++;
+  const layers = { fill: $("L-fill"), line: $("L-line"), lab: $("L-lab"), board: $("L-board") };
+  for (const k in layers) layers[k].textContent = "";
+  let n = 0;
+  for (const e of comp.els) {
+    const g = S("g", null, layers[e.layer || "board"]);
+    e.g = g; e._d = null; e._p = -1; e._o = -1; e.fade = false; e.head = null;
+    const col = `var(--c-${e.color || "black"})`;
+    switch (e.type) {
+      case "text": {
+        const id = `k${mountGen}_${++n}`;
+        const cp = S("clipPath", { id }, g);
+        const r = S("rect", { x: e.x - 10, y: e.y - e.size * 1.2, height: e.size * 1.8, width: 0 }, cp);
+        const tx = S("text", { x: e.x, y: e.y, "font-size": e.size.toFixed(1), "clip-path": `url(#${id})`, class: "pen", style: `fill:${col}` }, g);
+        tx.textContent = e.txt;
+        let aw = 0;
+        try { aw = tx.getComputedTextLength(); } catch (er) {}
+        if (aw > 0) {
+          const maxW = comp.split ? BRD.splitW : BRD.fullW;
+          if (aw > maxW) { tx.setAttribute("textLength", maxW); tx.setAttribute("lengthAdjust", "spacingAndGlyphs"); aw = maxW; }
+          e.w = aw;
+        }
+        e.upd = p => r.setAttribute("width", (p * (e.w + 22)).toFixed(1));
+        e.head = p => [e.x + p * e.w, e.y - e.size * 0.28];
+        break;
+      }
+      case "under": {
+        if (e.line) e.w = e.line.w;
+        const l = S("line", { x1: e.x, y1: e.y, x2: e.x, y2: e.y, style: `stroke:${col}`, "stroke-width": 4, "stroke-linecap": "round" }, g);
+        e.upd = p => l.setAttribute("x2", (e.x + p * e.w).toFixed(1));
+        e.head = p => [e.x + p * e.w, e.y];
+        break;
+      }
+      case "box": {
+        if (e.lines) e.w = Math.max(...e.lines.map(l => l.w)) + 32;
+        const per = 2 * (e.w + e.h);
+        const r = S("rect", { x: e.x, y: e.y, width: e.w, height: e.h, rx: 12, fill: "none", style: `stroke:${col}`, "stroke-width": 4, "stroke-dasharray": per, "stroke-dashoffset": per }, g);
+        e.upd = p => r.setAttribute("stroke-dashoffset", (per * (1 - p)).toFixed(1));
+        e.head = p => { let d = p * per; const { x, y, w, h } = e; if (d < w) return [x + d, y]; d -= w; if (d < h) return [x + w, y + d]; d -= h; if (d < w) return [x + w - d, y + h]; d -= w; return [x, y + h - d]; };
+        break;
+      }
+      case "table": {
+        const { x, y, cw, rh, nr, nc } = e, W = cw * nc, Ht = rh * nr;
+        const bg = S("rect", { x, y, width: W, height: rh, style: "fill:var(--thead)" }, g);
+        const lines = S("g", { style: `stroke:${col}`, "stroke-width": 2.4 }, g);
+        for (let i = 0; i <= nr; i++) S("line", { x1: x, y1: y + i * rh, x2: x + W, y2: y + i * rh }, lines);
+        for (let j = 0; j <= nc; j++) S("line", { x1: x + j * cw, y1: y, x2: x + j * cw, y2: y + Ht }, lines);
+        const cells = [];
+        e.cells.forEach((row, i) => row.forEach((c, j) => {
+          if (c === "") return;
+          const fs = e.cellSize[i][j];
+          const t = S("text", { x: x + j * cw + cw / 2, y: y + i * rh + rh / 2 + fs * 0.3, "font-size": fs.toFixed(1), "text-anchor": "middle", class: "pen", style: `fill:${col}`, opacity: 0 }, g);
+          t.textContent = c; cells.push(t);
+        }));
+        const hls = (e.hl || []).filter(([i, j]) => i < nr && j < nc).map(([i, j]) => S("ellipse", { cx: x + j * cw + cw / 2, cy: y + i * rh + rh / 2, rx: cw / 2 - 6, ry: rh / 2 - 5, fill: "none", style: "stroke:var(--c-red)", "stroke-width": 3.5, opacity: 0 }, g));
+        e.upd = p => {
+          const a = clamp(p / 0.15, 0, 1);
+          lines.setAttribute("opacity", a); bg.setAttribute("opacity", a);
+          const k = cells.length;
+          cells.forEach((c, i) => c.setAttribute("opacity", p >= 0.15 + 0.75 * i / Math.max(1, k) ? 1 : 0));
+          const hp = clamp((p - 0.9) / 0.1, 0, 1);
+          hls.forEach(h => h.setAttribute("opacity", hp));
+        };
+        e.head = p => {
+          if (p < 0.15) return [x + W * p / 0.15, y];
+          const k = cells.length; if (!k) return null;
+          const c = cells[Math.min(k - 1, Math.floor((p - 0.15) / 0.75 * k))];
+          return [+c.getAttribute("x") + 12, +c.getAttribute("y") - 8];
+        };
+        break;
+      }
+      case "seg": {
+        const l = S("line", { x1: e.x1, y1: e.y1, x2: e.x1, y2: e.y1, style: `stroke:${col}`, "stroke-width": e.wd, "stroke-linecap": "round" }, g);
+        if (e.dash) l.setAttribute("stroke-dasharray", "14 12");
+        e.upd = p => { l.setAttribute("x2", (e.x1 + (e.x2 - e.x1) * p).toFixed(1)); l.setAttribute("y2", (e.y1 + (e.y2 - e.y1) * p).toFixed(1)); };
+        e.head = p => [e.x1 + (e.x2 - e.x1) * p, e.y1 + (e.y2 - e.y1) * p];
+        break;
+      }
+      case "poly":
+        S("polygon", { points: e.pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" "), style: `fill:var(--fill-${e.fill})` }, g);
+        e.fade = true; e.upd = () => {};
+        break;
+      case "label": {
+        const t = S("text", { x: e.x, y: e.y, "font-size": e.size, "text-anchor": "middle", "dominant-baseline": "central", class: "pen", style: `fill:${col}` }, g);
+        t.textContent = e.txt; e.fade = true; e.upd = () => {};
+        break;
+      }
+      case "path":
+        S("path", { d: e.d, fill: "none", style: `stroke:${col}`, "stroke-width": e.wd, "stroke-linecap": "round", "stroke-linejoin": "round" }, g);
+        e.fade = true; e.upd = () => {};
+        break;
+      case "ang":
+        S("path", { d: e.d, fill: "none", style: `stroke:${col}`, "stroke-width": 3.4, "stroke-linecap": "round" }, g);
+        if (e.dot) S("circle", { cx: e.dot[0], cy: e.dot[1], r: 6, style: `fill:${col}` }, g);
+        e.fade = true; e.upd = () => {};
+        break;
+      case "dot":
+        S("circle", { cx: e.x, cy: e.y, r: 6.5, style: `fill:${col}` }, g);
+        e.fade = true; e.upd = () => {};
+        break;
+      case "circle": {
+        const c = S("circle", { cx: e.x, cy: e.y, r: e.r, fill: "none", style: `stroke:${col}`, "stroke-width": 3.4 }, g);
+        if (e.dash) { c.setAttribute("stroke-dasharray", "14 12"); e.fade = true; e.upd = () => {}; }
+        else {
+          const L = 2 * Math.PI * e.r;
+          c.setAttribute("stroke-dasharray", L.toFixed(1)); c.setAttribute("transform", `rotate(-90 ${e.x} ${e.y})`);
+          e.upd = p => c.setAttribute("stroke-dashoffset", (L * (1 - p)).toFixed(1));
+          e.head = p => [e.x + e.r * Math.cos(-Math.PI / 2 + 2 * Math.PI * p), e.y + e.r * Math.sin(-Math.PI / 2 + 2 * Math.PI * p)];
+        }
+        break;
+      }
+      default: e.upd = () => {};
+    }
+  }
+}
+
+function visOf(e, t) {
+  const iv = e.iv;
+  for (let i = iv.length - 1; i >= 0; i--) {
+    const a = iv[i][0], b = iv[i][1];
+    if (t >= a && t < b) return iv[i][2] ? Math.min(1, (t - a) / 0.3) : 1;
+    if (t >= b && t < b + 0.3) return 1 - (t - b) / 0.3;
+  }
+  return 0;
+}
+
+function render(t) {
+  const comp = P.comp;
+  let pen = null, pst = -1, late = null, lateEnd = -1;
+  for (const e of comp.els) {
+    const v = visOf(e, t), on = v > 0.002;
+    if (on !== e._d) { e.g.style.display = on ? "" : "none"; e._d = on; }
+    if (!on) continue;
+    const p = clamp((t - e.start) / e.dur, 0, 1);
+    if (p !== e._p) { e.upd(p); e._p = p; }
+    const o = e.fade ? v * p : v;
+    if (Math.abs(o - e._o) > 0.001) { e.g.setAttribute("opacity", o.toFixed(3)); e._o = o; }
+    if (e.head) {
+      if (p > 0 && p < 1) { if (e.start > pst) { pst = e.start; pen = e; } }
+      else if (p >= 1) { const end = e.start + e.dur; if (t - end < 0.45 && end > lateEnd) { lateEnd = end; late = e; } }
+    }
+  }
+  const pe = pen || late, pg = $("pen");
+  const hp = pe ? pe.head(pen ? clamp((t - pe.start) / pe.dur, 0, 1) : 1) : null;
+  if (hp) { pg.style.display = ""; pg.setAttribute("transform", `translate(${hp[0].toFixed(1)} ${hp[1].toFixed(1)})`); }
+  else pg.style.display = "none";
+  updateUI(t);
+}
+
+function updateUI(t) {
+  const c = P.comp;
+  for (const s of segs) { const f = clamp((t - s.ch.start) / (s.ch.end - s.ch.start), 0, 1); if (f !== s.f) { s.fill.style.width = (f * 100).toFixed(2) + "%"; s.f = f; } }
+  const tt = fmtTime(t) + " / " + fmtTime(c.total);
+  if (tt !== ui.time) { $("time").textContent = tt; ui.time = tt; }
+  const si = stepAt(t), ci = c.steps[si].ci;
+  if (ci !== ui.ci) { ui.ci = ci; $("chapName").textContent = c.chapters[ci].title; chItems.forEach((li, i) => li.classList.toggle("on", i === ci)); }
+  const sub = P.ccOn && !P.ended && (P.playing || t > 0) ? c.steps[si].say : "";
+  if (sub !== ui.sub) { ui.sub = sub; const el = $("subs"); el.textContent = sub; el.hidden = !sub; }
+}
+
+/* ---------- 목소리 ----------
+   AI 목소리: Gemini·OpenAI 음성 모델로 단계마다 음성을 만들어 이 기기에 저장해 두고 재생해요.
+   기기 목소리: 휴대폰에 들어 있는 목소리(speechSynthesis). AI 목소리를 못 쓸 때 대신 써요. */
+const VS = { mode: store.get("voiceMode", "ai"), aiVoice: store.get("aiVoice", {}) || {}, deviceName: store.get("deviceVoice", ""), server: null, fails: 0, aiRestUntil: 0, gemModel: store.get("gemTts", "") };
+const AI_VOICES = {
+  gemini: [["Sulafat", "따뜻한 목소리"], ["Achird", "친근한 목소리"], ["Vindemiatrix", "부드러운 목소리"], ["Kore", "또렷한 목소리"], ["Charon", "차분하게 설명하는 목소리"], ["Puck", "밝은 목소리"]],
+  openai: [["coral", "따뜻한 목소리"], ["sage", "차분한 목소리"], ["nova", "밝은 목소리"], ["shimmer", "부드러운 목소리"], ["ash", "또렷한 목소리"], ["onyx", "낮은 목소리"]]
+};
+const GEM_TTS = ["gemini-3.8-flash-tts", "gemini-3.8-flash-lite-tts", "gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts"];
+const OAI_TTS_INSTR = "Speak natural Korean like a warm, friendly middle-school math teacher explaining a problem step by step to one student. Calm, clear and encouraging, with natural pauses.";
+const VOICE_SAMPLE = "안녕! 오늘도 칠판에 같이 풀어 보자. 그림에서 이게 보이지?";
+
+function aiSource() {
+  if (VS.server && VS.server.ok && API_BASE != null) return { via: "server", provider: VS.server.provider };
+  if (devAI && devAI.key && (devAI.provider === "gemini" || devAI.provider === "openai")) return { via: "direct", provider: devAI.provider };
+  return null;
+}
+function aiVoiceName(provider) { const list = AI_VOICES[provider]; const v = VS.aiVoice[provider]; return list.some(x => x[0] === v) ? v : list[0][0]; }
+function aiVoiceDesc(provider, name) { const f = AI_VOICES[provider].find(x => x[0] === name); return f ? f[1] : name; }
+const useAI = () => VS.mode === "ai" && !!aiSource() && performance.now() > VS.aiRestUntil;
+function voiceUsable() { return P.voiceOn && (useAI() || (!!VOICE.kind && performance.now() > P.restUntil)); }
+
+/* 기기 목소리 */
+function initWebVoice() {
+  if (!("speechSynthesis" in window)) return;
+  const pick = () => {
+    let vs = [];
+    try { vs = speechSynthesis.getVoices() || []; } catch (e) {}
+    const ko = vs.filter(v => /^ko/i.test(v.lang));
+    const score = v => (/premium|enhanced|neural|natural|online|wavenet/i.test(v.name) ? 4 : 0) + (/google/i.test(v.name) ? 3 : 0) + (/yuna|sora|heami|jiyoung|sunhi/i.test(v.name) ? 2 : 0) + (v.localService === false ? 1 : 0);
+    VOICE.koList = ko.slice().sort((x, y) => score(y) - score(x));
+    VOICE.ko = VOICE.koList.find(v => v.name === VS.deviceName) || VOICE.koList[0] || null;
+    VOICE.web = !!VOICE.ko || vs.length === 0;
+    VOICE.kind = VOICE.web ? "web" : null;
+    syncButtons();
+  };
+  pick();
+  try { speechSynthesis.addEventListener("voiceschanged", pick); } catch (e) {}
+}
+let speechUnlocked = false;
+function unlockSpeech() {
+  if (speechUnlocked || !("speechSynthesis" in window)) return;
+  speechUnlocked = true;
+  try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; u.lang = "ko-KR"; speechSynthesis.speak(u); } catch (e) {}
+}
+function webSpeak(text, tok, fin, voice) {
+  if (VOICE.kind !== "web") { fin(); return; }
+  try {
+    speechSynthesis.cancel();
+    // 긴 문장은 문장별로 나눠 읽어요 (일부 브라우저가 긴 문장을 중간에 끊어서)
+    const parts = (text.match(/[^.!?…]+[.!?…]*\s*/g) || [text]).map(s => s.trim()).filter(Boolean);
+    parts.forEach((s, i) => {
+      const u = new SpeechSynthesisUtterance(s);
+      u.lang = "ko-KR"; const v = voice || VOICE.ko; if (v) u.voice = v;
+      u.rate = clamp(P.speed * 0.97, 0.5, 2);
+      if (i === 0) u.onstart = () => { P.voiceFails = 0; if (tok == null || P.sp.tok === tok) { P.sp.started = true; setVoiceWait(false); } };
+      if (i === parts.length - 1) u.onend = fin;
+      u.onerror = ev => { if (!ev || ev.error !== "interrupted") fin(); };
+      speechSynthesis.speak(u);
+    });
+  } catch (e) { fin(); }
+}
+
+/* AI 목소리: 만들기 + 이 기기에 저장 */
+const clipMem = new Map(), clipPending = new Map();
+let idbP = null;
+function idb() {
+  if (idbP) return idbP;
+  idbP = new Promise(res => {
+    try { const r = indexedDB.open("chalk-audio", 1); r.onupgradeneeded = () => r.result.createObjectStore("clips"); r.onsuccess = () => res(r.result); r.onerror = () => res(null); r.onblocked = () => res(null); }
+    catch (e) { res(null); }
+  });
+  return idbP;
+}
+async function idbGet(k) { const d = await idb(); if (!d) return null; return new Promise(res => { try { const q = d.transaction("clips").objectStore("clips").get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); } catch (e) { res(null); } }); }
+async function idbPut(k, v) { const d = await idb(); if (!d) return; try { d.transaction("clips", "readwrite").objectStore("clips").put(v, k); } catch (e) {} }
+let ttsActive = 0;
+const ttsQueue = [];
+function ttsSlot(priority) {
+  return new Promise(r => {
+    const go = () => { ttsActive++; r(() => { ttsActive--; const n = ttsQueue.shift(); if (n) n(); }); };
+    if (ttsActive < 2) go(); else if (priority) ttsQueue.unshift(go); else ttsQueue.push(go);
+  });
+}
+function ttsErr(status, msg) { const e = new Error(msg || ("HTTP " + status)); e.status = status; return e; }
+function b64bytes(b64) { const s = atob(b64), out = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i); return out; }
+function pcmToWav(pcm, rate) {
+  const h = new DataView(new ArrayBuffer(44));
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) h.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, "RIFF"); h.setUint32(4, 36 + pcm.length, true); w(8, "WAVE"); w(12, "fmt "); h.setUint32(16, 16, true); h.setUint16(20, 1, true); h.setUint16(22, 1, true);
+  h.setUint32(24, rate, true); h.setUint32(28, rate * 2, true); h.setUint16(32, 2, true); h.setUint16(34, 16, true); w(36, "data"); h.setUint32(40, pcm.length, true);
+  return new Blob([h.buffer, pcm], { type: "audio/wav" });
+}
+function audioBlob(b64, mime) {
+  const bytes = b64bytes(b64);
+  const isWav = /wav/i.test(mime) || (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46);
+  if (isWav) return new Blob([bytes], { type: "audio/wav" });
+  if (/mpeg|mp3/i.test(mime)) return new Blob([bytes], { type: "audio/mpeg" });
+  const m = /rate=(\d+)/i.exec(mime || "");
+  return pcmToWav(bytes, m ? +m[1] : 24000);
+}
+async function synth(src, voice, text) {
+  if (src.via === "server") {
+    const r = await fetch(API_BASE + "/api/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, voice }) });
+    if (!r.ok) { let j = {}; try { j = await r.json(); } catch (e) {} throw ttsErr(r.status, j.error); }
+    return await r.blob();
+  }
+  if (src.provider === "openai") {
+    const r = await fetch("https://api.openai.com/v1/audio/speech", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + devAI.key },
+      body: JSON.stringify({ model: "gpt-4o-mini-tts", voice, input: text, instructions: OAI_TTS_INSTR, response_format: "mp3" }) });
+    if (!r.ok) { let j = {}; try { j = await r.json(); } catch (e) {} throw ttsErr(r.status, j.error && j.error.message); }
+    return await r.blob();
+  }
+  const models = VS.gemModel ? [VS.gemModel, ...GEM_TTS.filter(m => m !== VS.gemModel)] : GEM_TTS;
+  let last = null;
+  for (const m of models) {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(devAI.key)}`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ contents: [{ role: "user", parts: [{ text }] }], generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } } })
+    });
+    let j = {};
+    try { j = await r.json(); } catch (e) {}
+    const msg = j.error && j.error.message;
+    if (r.ok) {
+      const parts = ((((j.candidates || [])[0] || {}).content) || {}).parts || [];
+      const inl = parts.map(p => p.inlineData || p.inline_data).find(x => x && x.data);
+      if (inl) { if (VS.gemModel !== m) { VS.gemModel = m; store.set("gemTts", m); } return audioBlob(inl.data, inl.mimeType || inl.mime_type || ""); }
+      last = ttsErr(500, "빈 음성이 왔어요"); continue;
+    }
+    last = ttsErr(r.status, msg);
+    if (r.status === 401 || r.status === 403 || r.status === 429 || (r.status === 400 && /api key/i.test(msg || ""))) throw last;
+  }
+  throw last || ttsErr(500, "음성을 만들지 못했어요");
+}
+function getClip(text, priority, voiceOverride) {
+  const src = aiSource();
+  if (!src) return Promise.reject(ttsErr(0, "AI 목소리를 쓸 수 없어요"));
+  const voice = voiceOverride || aiVoiceName(src.provider);
+  const k = src.provider + "|" + voice + "|" + hashCode(text) + "|" + text.length;
+  if (clipMem.has(k)) return Promise.resolve(clipMem.get(k));
+  if (clipPending.has(k)) return clipPending.get(k);
+  const p = (async () => {
+    const cached = await idbGet(k);
+    if (cached && cached.blob) { const c = { blob: cached.blob, url: URL.createObjectURL(cached.blob) }; clipMem.set(k, c); return c; }
+    const release = await ttsSlot(priority);
+    try {
+      const blob = await synth(src, voice, text);
+      const c = { blob, url: URL.createObjectURL(blob) };
+      clipMem.set(k, c); idbPut(k, { blob });
+      return c;
+    } finally { release(); }
+  })();
+  clipPending.set(k, p);
+  p.then(() => clipPending.delete(k), () => clipPending.delete(k));
+  return p;
+}
+function prefetchFrom(i, n) {
+  if (!useAI() || !P.comp) return;
+  const st = P.comp.steps;
+  for (let j = i; j < Math.min(st.length, i + (n || 3)); j++) if (st[j].say) getClip(st[j].say, false).catch(() => {});
+}
+function aiFail(err) {
+  const s = err && err.status;
+  if (s === 401 || s === 403 || (s === 400 && /api key/i.test(err.message || ""))) { VS.aiRestUntil = Infinity; toast("AI 목소리 키가 맞지 않아서 기기 목소리로 읽어 줄게요."); }
+  else if (s === 429) { VS.aiRestUntil = performance.now() + 60000; toast("AI 목소리 사용량 한도에 걸려서 1분 동안 기기 목소리로 읽어 줄게요."); }
+  else if (++VS.fails >= 2) { VS.fails = 0; VS.aiRestUntil = performance.now() + 120000; toast("AI 목소리를 만들지 못해서 잠깐 기기 목소리로 읽어 줄게요."); }
+  updateVoiceBar();
+}
+
+/* 재생 */
+const audioEl = new Audio();
+audioEl.preload = "auto";
+let audioUnlocked = false;
+const SILENT_WAV = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  try { audioEl.src = SILENT_WAV; const p = audioEl.play(); if (p) p.catch(() => {}); } catch (e) {}
+}
+function setVoiceWait(on) { const w = $("vwait"); if (w && w.hidden === !!on) w.hidden = !on; }
+function playClip(clip, tok) {
+  const fallback = () => { if (P.sp.tok === tok && !P.sp.done) { P.sp.ai = false; webSpeak(P.comp.steps[P.sp.step].say, tok, P.sp.fin); } };
+  try {
+    audioEl.onplaying = () => { if (P.sp.tok === tok) { P.sp.started = true; setVoiceWait(false); } };
+    audioEl.onended = () => { if (P.sp.tok === tok) P.sp.fin(); };
+    audioEl.onerror = fallback;
+    audioEl.src = clip.url;
+    audioEl.defaultPlaybackRate = P.speed; audioEl.playbackRate = P.speed;
+    const p = audioEl.play();
+    if (p) p.catch(e => { if (!e || e.name !== "AbortError") fallback(); });
+  } catch (e) { fallback(); }
+}
+function speakStep(si, now) {
+  const tok = P.sp.tok + 1;
+  const fin = () => { if (P.sp.tok === tok) { P.sp.done = true; P.sp.started = true; setVoiceWait(false); } };
+  P.sp = { step: si, tok, started: false, done: false, at: now, hold: 0, paused: false, ai: false, fin, clip: null };
+  const text = P.comp.steps[si].say;
+  if (!text) { fin(); return; }
+  if (useAI()) {
+    P.sp.ai = true; setVoiceWait(true);
+    getClip(text, true).then(clip => {
+      if (P.sp.tok !== tok || !P.sp.ai) return;
+      VS.fails = 0; P.sp.clip = clip;
+      if (P.playing) playClip(clip, tok); else P.sp.paused = true;
+    }, err => {
+      if (P.sp.tok !== tok || !P.sp.ai) return;
+      aiFail(err);
+      P.sp.ai = false; P.sp.at = performance.now();
+      webSpeak(text, tok, fin);
+    });
+    prefetchFrom(si + 1, 3);
+    return;
+  }
+  webSpeak(text, tok, fin);
+}
+function stopSpeech() {
+  const wasActive = !P.sp.done;
+  P.sp = { step: -1, tok: P.sp.tok + 1, started: true, done: true, at: 0, hold: 0, paused: false, ai: false, fin: () => {}, clip: null };
+  setVoiceWait(false);
+  try { audioEl.onended = null; audioEl.onplaying = null; audioEl.onerror = null; audioEl.pause(); } catch (e) {}
+  if (wasActive && "speechSynthesis" in window) { try { speechSynthesis.cancel(); } catch (e) {} }
+}
+
+/* 목소리 고르기 */
+const previewEl = new Audio();
+function voiceLabel() {
+  if (!P.voiceOn) return "꺼짐 (자막만)";
+  const src = aiSource();
+  if (VS.mode === "ai" && src) return "AI 목소리 · " + aiVoiceDesc(src.provider, aiVoiceName(src.provider)) + (performance.now() <= VS.aiRestUntil ? " (잠시 기기 목소리)" : "");
+  if (VOICE.kind) return "기기 목소리" + (VOICE.ko ? " · " + VOICE.ko.name : "");
+  return "없음 (자막으로 봐 주세요)";
+}
+function updateVoiceBar() { const l = $("voiceLabel"); if (l) l.textContent = voiceLabel(); }
+function stopPreview() { try { previewEl.pause(); } catch (e) {} try { speechSynthesis.cancel(); } catch (e) {} document.querySelectorAll(".vitem.loading").forEach(x => x.classList.remove("loading")); }
+function previewAI(name, btnRow) {
+  stopPreview(); if (P.playing) pause();
+  btnRow.classList.add("loading");
+  getClip(VOICE_SAMPLE, true, name).then(c => { btnRow.classList.remove("loading"); previewEl.src = c.url; previewEl.play().catch(() => {}); },
+    e => { btnRow.classList.remove("loading"); toast(e && (e.status === 401 || e.status === 403) ? "키가 맞지 않아요. AI 키를 다시 확인해 주세요." : e && e.status === 429 ? "AI 목소리 사용량 한도에 걸렸어요. 잠시 뒤 다시 해 주세요." : "AI 목소리를 만들지 못했어요."); });
+}
+function renderVoiceSheet() {
+  const src = aiSource(), ai = VS.mode === "ai";
+  $("vmAI").classList.toggle("on", ai); $("vmDev").classList.toggle("on", !ai);
+  $("vAIBox").hidden = !ai; $("vDevBox").hidden = ai;
+  const note = $("vAINote"), list = $("vAIList");
+  list.textContent = "";
+  if (!src) {
+    note.textContent = "AI 목소리는 Gemini나 OpenAI 키가 있어야 만들 수 있어요. ‘+ 새 강의’ 화면의 AI 키 넣기에 키를 넣어 주세요. (Claude API 키로는 목소리를 만들 수 없어서 기기 목소리로 읽어요)";
+  } else {
+    note.textContent = (src.provider === "gemini" ? "Google Gemini" : "OpenAI") + " 목소리예요. 처음 읽을 때 한 번 만들어서 이 기기에 저장해 두고, 다음부터는 바로 재생해요.";
+    const cur = aiVoiceName(src.provider);
+    for (const [name, desc] of AI_VOICES[src.provider]) {
+      const row = H("div", { class: "vitem" + (name === cur ? " on" : "") },
+        H("button", { class: "vpick", onclick: () => { VS.aiVoice[src.provider] = name; store.set("aiVoice", VS.aiVoice); renderVoiceSheet(); updateVoiceBar(); if (P.comp) { stopSpeech(); P.t = P.comp.steps[stepAt(P.t)].start; P.dirty = true; } } }, H("b", null, desc), H("small", null, name)),
+        H("button", { class: "vplay", "aria-label": desc + " 미리 듣기", onclick: e => previewAI(name, e.currentTarget.parentNode) }, "▶ 듣기"));
+      list.append(row);
+    }
+  }
+  const dl = $("vDevList");
+  dl.textContent = "";
+  if (!VOICE.koList || !VOICE.koList.length) dl.append(H("p", { class: "vnote" }, "이 기기에서 한국어 목소리를 찾지 못했어요. 휴대폰 설정 → 텍스트 음성 변환(TTS)에서 한국어 음성을 내려받으면 쓸 수 있어요."));
+  else for (const v of VOICE.koList.slice(0, 8)) {
+    const row = H("div", { class: "vitem" + (VOICE.ko === v ? " on" : "") },
+      H("button", { class: "vpick", onclick: () => { VOICE.ko = v; VS.deviceName = v.name; store.set("deviceVoice", v.name); renderVoiceSheet(); updateVoiceBar(); } }, H("b", null, v.name), H("small", null, v.localService === false ? "인터넷 목소리" : "기기 안 목소리")),
+      H("button", { class: "vplay", onclick: () => { stopPreview(); if (P.playing) pause(); webSpeak(VOICE_SAMPLE, null, () => {}, v); } }, "▶ 듣기"));
+    dl.append(row);
+  }
+}
+function openVoiceSheet() { if (P.playing) pause(); renderVoiceSheet(); $("voiceModal").hidden = false; }
+function closeVoiceSheet() { stopPreview(); $("voiceModal").hidden = true; updateVoiceBar(); syncButtons(); }
+function wireVoice() {
+  $("bVoiceSet").onclick = openVoiceSheet;
+  $("bVoiceDone").onclick = closeVoiceSheet;
+  $("voiceModal").addEventListener("click", e => { if (e.target === $("voiceModal")) closeVoiceSheet(); });
+  $("vmAI").onclick = () => { VS.mode = "ai"; store.set("voiceMode", "ai"); VS.aiRestUntil = 0; renderVoiceSheet(); };
+  $("vmDev").onclick = () => { VS.mode = "device"; store.set("voiceMode", "device"); renderVoiceSheet(); };
+  checkAI();
+}
+
+/* ---------- 재생 ---------- */
+function play() {
+  if (!P.comp) return;
+  unlockSpeech(); unlockAudio();
+  if (P.ended || P.t >= P.comp.total - 0.01) seekTo(0);
+  P.ended = false; P.playing = true;
+  $("ovStart").hidden = true; $("ovEnd").hidden = true;
+  if (P.sp.paused && P.sp.ai && !P.sp.done) {
+    P.sp.paused = false;
+    if (P.sp.clip && audioEl.src === P.sp.clip.url && audioEl.currentTime > 0 && !audioEl.ended) audioEl.play().catch(() => {});
+    else if (P.sp.clip) playClip(P.sp.clip, P.sp.tok);
+  }
+  P.last = 0; P.dirty = true;
+  syncButtons();
+}
+function pause() {
+  if (!P.playing) return;
+  P.playing = false;
+  if (!P.sp.done) {
+    if (P.sp.ai) { try { audioEl.pause(); } catch (e) {} P.sp.paused = true; }
+    else { stopSpeech(); if (P.comp) P.t = P.comp.steps[stepAt(P.t)].start; }
+  }
+  P.dirty = true;
+  syncButtons();
+}
+function toggle() { P.playing ? pause() : play(); }
+function seekTo(t) {
+  stopSpeech();
+  const c = P.comp;
+  t = clamp(t, 0, c.total);
+  if (voiceUsable() && t < c.total - 0.01) t = c.steps[stepAt(t)].start;
+  P.t = t; P.ended = false; P.dirty = true;
+  $("ovEnd").hidden = true;
+  if (t > 0) $("ovStart").hidden = true;
+}
+function finish() {
+  P.playing = false; P.ended = true; P.t = P.comp.total;
+  stopSpeech();
+  $("ovEnd").hidden = false;
+  syncButtons();
+}
+function loop(now) {
+  requestAnimationFrame(loop);
+  const c = P.comp;
+  if (!c) { P.last = now; return; }
+  const dt = P.last ? Math.min(0.1, (now - P.last) / 1000) : 0;
+  P.last = now;
+  if (P.playing && !P.drag) {
+    const si = stepAt(P.t), st = c.steps[si], end = st.start + st.dur;
+    let adv = dt * P.speed;
+    if (voiceUsable()) {
+      if (P.sp.step !== si) speakStep(si, now);
+      const sp = P.sp;
+      const wait = sp.ai ? 20000 : 3500;
+      if (!sp.started && !sp.done) {
+        if (now - sp.at < wait) adv = 0;
+        else if (sp.ai) { sp.ai = false; sp.at = now; aiFail({ status: 0 }); webSpeak(st.say, sp.tok, sp.fin); adv = 0; }
+        else {
+          sp.done = true;
+          if (VOICE.kind === "web" && ++P.voiceFails >= 2) { VOICE.kind = null; toast("이 기기에서는 목소리가 나오지 않아서 자막으로 보여 줄게요."); syncButtons(); }
+        }
+      } else if (!sp.done && P.t + adv >= end - 0.02) {
+        adv = Math.max(0, end - 0.02 - P.t);
+        if (!sp.hold) sp.hold = now; else if (now - sp.hold > 15000) sp.done = true;
+      }
+    }
+    P.t = Math.min(c.total, P.t + adv);
+    if (P.t >= c.total - 1e-6) finish();
+  }
+  if (P.t !== P.drawnT || P.dirty) { render(P.t); P.drawnT = P.t; P.dirty = false; }
+}
+
+function syncButtons() {
+  $("bPlay").innerHTML = P.playing ? ICON.pause : ICON.play;
+  $("bPlay").setAttribute("aria-label", P.playing ? "일시정지" : "재생");
+  const vb = $("bVoice");
+  vb.innerHTML = voiceUsable() ? ICON.vol : ICON.mute;
+  vb.classList.toggle("off", !VOICE.kind);
+  vb.title = !VOICE.kind ? "이 화면에서는 목소리를 쓸 수 없어요 (자막으로 봐 주세요)" : P.voiceOn ? "목소리 끄기 (M)" : "목소리 켜기 (M)";
+  updateVoiceBar();
+  $("bCC").innerHTML = ICON.cc;
+  $("bCC").classList.toggle("off", !P.ccOn);
+  $("bCC").title = P.ccOn ? "자막 끄기 (C)" : "자막 켜기 (C)";
+  $("bSpeed").textContent = P.speed + "x";
+  $("bTheme").textContent = P.theme === "note" ? "공책" : "칠판";
+  $("stage").className = "stage theme-" + P.theme;
+}
+
+function buildProgress() {
+  const pr = $("prog");
+  pr.querySelectorAll(".seg").forEach(n => n.remove());
+  segs = P.comp.chapters.map(ch => {
+    const s = H("div", { class: "seg" });
+    s.style.flex = `${(ch.end - ch.start).toFixed(2)} 1 0`;
+    const i = H("i"); s.append(i); pr.append(s);
+    return { el: s, fill: i, ch, f: -1 };
+  });
+}
+function tFromX(x) {
+  for (let i = 0; i < segs.length; i++) {
+    const r = segs[i].el.getBoundingClientRect();
+    if (x <= r.right || i === segs.length - 1) { const ch = segs[i].ch; return ch.start + clamp((x - r.left) / r.width, 0, 1) * (ch.end - ch.start); }
+  }
+  return 0;
+}
+
+function openLecture(L) {
+  if (P.lec && P.lec.id === L.id && P.comp) { P.dirty = true; syncButtons(); return; }
+  stopSpeech(); P.playing = false;
+  P.lec = L;
+  P.comp = compileLecture(L, measure);
+  P.compFonts = fontsReady;
+  mount(P.comp);
+  P.t = 0; P.ended = false; P.dirty = true; ui = {};
+  $("ovStart").hidden = false; $("ovEnd").hidden = true;
+  $("ovTitle").textContent = L.title;
+  $("ovSub").textContent = "강의 시작 · " + fmtTime(P.comp.total) + (useAI() ? " · AI 목소리" : VOICE.kind ? "" : " · 자막으로 진행");
+  buildProgress();
+  const list = $("chlist"); list.textContent = "";
+  chItems = P.comp.chapters.map((ch, i) => {
+    const li = H("li", null, H("button", { onclick: () => { seekTo(ch.start); play(); window.scrollTo({ top: 0, behavior: "smooth" }); } }, H("span", { class: "ct" }, fmtTime(ch.start)), H("span", null, (i + 1) + ". " + ch.title)));
+    list.append(li); return li;
+  });
+  setTimeout(() => prefetchFrom(0, 2), 400);
+  $("pTitle").textContent = L.title;
+  $("pMeta").textContent = [L.unit, fmtTime(P.comp.total) + " 강의", "챕터 " + P.comp.chapters.length + "개"].filter(Boolean).join(" · ");
+  $("pAnswer").hidden = true;
+  $("pAnswer").textContent = "";
+  if (L.answer) $("pAnswer").append(H("div", null, H("b", null, "정답 "), L.answer));
+  if (L.tip) $("pAnswer").append(H("div", null, H("b", null, "요령 "), L.tip));
+  $("bAnswer").hidden = !(L.answer || L.tip);
+  $("bAnswer").textContent = "정답 보기";
+  const del = $("bDel");
+  del.hidden = L.origin !== "mine";
+  del.textContent = "강의 삭제"; del.dataset.arm = "";
+  $("bSave").hidden = L.origin !== "shared";
+  if (L.ai) $("pMeta").textContent += " · " + L.ai;
+  syncButtons();
+}
+function leavePlayer() { if (P.playing) pause(); stopSpeech(); }
+
+/* ---------- 컨트롤 연결 ---------- */
+function wireControls() {
+  $("bigPlay").onclick = play;
+  $("bPlay").onclick = toggle;
+  $("bReplay").onclick = () => { seekTo(0); play(); };
+  $("board").addEventListener("click", () => { if (!$("ovStart").hidden) return; toggle(); });
+  $("bPrev").innerHTML = ICON.prev; $("bNext").innerHTML = ICON.next;
+  $("bPrev").onclick = () => { const ci = chapterAt(P.t), ch = P.comp.chapters[ci]; seekTo(P.t - ch.start > 2 || ci === 0 ? ch.start : P.comp.chapters[ci - 1].start); };
+  $("bNext").onclick = () => { const ci = chapterAt(P.t); if (ci < P.comp.chapters.length - 1) seekTo(P.comp.chapters[ci + 1].start); };
+  $("bVoice").onclick = () => {
+    if (!VOICE.kind) { toast("이 화면에서는 목소리를 쓸 수 없어요. 자막으로 봐 주세요."); return; }
+    P.voiceOn = !P.voiceOn; store.set("voice", P.voiceOn);
+    stopSpeech();
+    if (P.voiceOn && P.comp) P.t = P.comp.steps[stepAt(P.t)].start;
+    P.dirty = true; syncButtons();
+  };
+  $("bCC").onclick = () => { P.ccOn = !P.ccOn; store.set("cc", P.ccOn); P.dirty = true; ui.sub = null; syncButtons(); };
+  $("bSpeed").onclick = () => {
+    const list = [1, 1.25, 1.5, 0.8];
+    P.speed = list[(list.indexOf(P.speed) + 1) % list.length];
+    try { audioEl.playbackRate = P.speed; } catch (e) {}
+    syncButtons();
+  };
+  $("bTheme").onclick = () => { P.theme = P.theme === "note" ? "chalk" : "note"; store.set("theme", P.theme); syncButtons(); };
+  $("bChap").onclick = () => $("chHead").scrollIntoView({ behavior: "smooth", block: "start" });
+  $("bAnswer").onclick = () => { const a = $("pAnswer"); a.hidden = !a.hidden; $("bAnswer").textContent = a.hidden ? "정답 보기" : "정답 숨기기"; };
+  $("bShare").onclick = () => { if (P.lec) shareLecture(P.lec).catch(() => toast("공유 링크를 만들지 못했어요.")); };
+  $("bExport").onclick = () => { if (P.lec) exportLecture(P.lec); };
+  $("bSave").onclick = () => {
+    if (!P.lec || P.lec.origin !== "shared") return;
+    const item = saveMine(P.lec);
+    toast("내 강의 목록에 저장했어요.");
+    P.lec = null; go("lec-" + item.id);
+  };
+  $("bShareCopy").onclick = () => { const t = $("shareUrl"); t.select(); try { navigator.clipboard.writeText(t.value).then(() => toast("복사했어요."), () => {}); } catch (e) {} try { document.execCommand("copy"); } catch (e) {} };
+  $("bShareClose").onclick = () => { $("shareModal").hidden = true; };
+  $("shareModal").addEventListener("click", e => { if (e.target === $("shareModal")) $("shareModal").hidden = true; });
+  $("bDel").onclick = () => {
+    const b = $("bDel"), L = P.lec;
+    if (!L || L.origin !== "mine") return;
+    if (!b.dataset.arm) { b.dataset.arm = "1"; b.textContent = "한 번 더 누르면 삭제돼요"; setTimeout(() => { if (b.dataset.arm) { b.dataset.arm = ""; b.textContent = "강의 삭제"; } }, 4000); return; }
+    myLecs = myLecs.filter(x => x.id !== L.id);
+    persistMine();
+    leavePlayer(); P.lec = null; P.comp = null;
+    toast("강의를 지웠어요.");
+    go("home");
+  };
+
+  const pr = $("prog"), pop = $("pop");
+  let wasPlaying = false;
+  const showPop = x => {
+    const t = tFromX(x), r = pr.getBoundingClientRect();
+    pop.hidden = false;
+    pop.style.left = clamp(x - r.left, 30, r.width - 30) + "px";
+    pop.textContent = fmtTime(t) + " · " + P.comp.chapters[chapterAt(t)].title;
+    return t;
+  };
+  pr.addEventListener("pointermove", e => { if (!P.comp) return; const t = showPop(e.clientX); if (P.drag) { P.t = t; P.dirty = true; } });
+  pr.addEventListener("pointerleave", () => { if (!P.drag) pop.hidden = true; });
+  pr.addEventListener("pointerdown", e => {
+    if (!P.comp) return;
+    try { pr.setPointerCapture(e.pointerId); } catch (er) {}
+    wasPlaying = P.playing; if (P.playing) pause();
+    stopSpeech();
+    P.drag = true; pr.classList.add("drag");
+    P.t = showPop(e.clientX); P.dirty = true;
+    $("ovStart").hidden = true; $("ovEnd").hidden = true;
+  });
+  const end = e => {
+    if (!P.drag) return;
+    P.drag = false; pr.classList.remove("drag"); pop.hidden = true;
+    seekTo(tFromX(e.clientX));
+    if (wasPlaying || P.t > 0) play();
+  };
+  pr.addEventListener("pointerup", end);
+  pr.addEventListener("pointercancel", end);
+
+  document.addEventListener("keydown", e => {
+    if ($("v-player").hidden || !P.comp) return;
+    const tg = e.target && e.target.tagName;
+    if (tg === "INPUT" || tg === "TEXTAREA" || (tg === "BUTTON" && (e.key === " " || e.key === "Enter"))) return;
+    const k = e.key.toLowerCase();
+    if (k === " " || k === "k") { e.preventDefault(); toggle(); }
+    else if (k === "arrowright" || k === "l") { e.preventDefault(); const si = stepAt(P.t); seekTo(si < P.comp.steps.length - 1 ? P.comp.steps[si + 1].start : P.comp.total); }
+    else if (k === "arrowleft" || k === "j") { e.preventDefault(); const si = stepAt(P.t), st = P.comp.steps[si]; seekTo(P.t - st.start > 1.5 || si === 0 ? st.start : P.comp.steps[si - 1].start); }
+    else if (k === "m") $("bVoice").click();
+    else if (k === "c") $("bCC").click();
+  });
+}
+
+/* ---------- 새 강의 만들기 ---------- */
+let genImg = null, genAbort = null, genTimer = 0, previewUrl = null;
+let aiInfo = null, aiChecking = null;
+let devAI = store.get("ai", null);   // { provider, key, model } — 이 기기에만 저장
+let keyEditing = false, pendingKeyGen = false;
+const AI_NAMES = { gemini: "Google Gemini", openai: "OpenAI", anthropic: "Claude API" };
+const AI_DEFAULT = { gemini: "gemini-flash-latest", openai: "gpt-5.6-terra", anthropic: "claude-sonnet-5-5" };
+const AI_HELP = { gemini: "키 받는 곳: aistudio.google.com → Get API key (무료 사용량이 있어요)", openai: "키 받는 곳: platform.openai.com → API keys", anthropic: "키 받는 곳: console.anthropic.com → API Keys" };
+const useServer = () => !!(aiInfo && aiInfo.ok && !aiInfo.offline);
+function serverCandidates() {
+  const list = [];
+  const custom = String(store.get("server", "") || "").trim().replace(/\/+$/, "");
+  if (custom) list.push(custom);
+  if (IS_WEB) list.push("");
+  if (BUILT_SERVER) list.push(BUILT_SERVER);
+  return [...new Set(list)];
+}
+async function probeServer(base) {
+  const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 8000);
+  try {
+    const r = await fetch(base + "/api/generate", { cache: "no-store", signal: ac.signal });
+    if (!/json/i.test(r.headers.get("content-type") || "")) return null;
+    const j = await r.json();
+    return j && typeof j === "object" && "ok" in j ? j : null;
+  } catch (e) { return null; } finally { clearTimeout(tm); }
+}
+function checkAI() {
+  if (aiChecking) return aiChecking;
+  aiChecking = (async () => {
+    let found = null, base = null;
+    for (const b of serverCandidates()) {
+      const j = await probeServer(b);
+      if (j && (!found || j.ok)) { found = j; base = b; }
+      if (j && j.ok) break;
+    }
+    aiInfo = found || { ok: false, offline: true, none: !serverCandidates().length };
+    API_BASE = found ? base : null;
+  })().then(() => { renderAINote(); probeTTS(); setTimeout(() => { aiChecking = null; }, 30000); });
+  return aiChecking;
+}
+function probeTTS() {
+  if (API_BASE == null) { VS.server = null; updateVoiceBar(); return; }
+  fetch(API_BASE + "/api/tts", { cache: "no-store" }).then(r => r.ok ? r.json() : null)
+    .then(j => { VS.server = j && j.ok ? { ok: true, provider: j.provider } : null; updateVoiceBar(); if (P.comp && !$("ovStart").hidden) $("ovSub").textContent = "강의 시작 · " + fmtTime(P.comp.total) + (useAI() ? " · AI 목소리" : ""); })
+    .catch(() => {});
+}
+function renderAINote() {
+  const n = $("aiNote"), kb = $("keyBox");
+  if (!aiInfo) { n.hidden = true; kb.hidden = true; return; }
+  n.textContent = "";
+  const advLink = label => H("button", { class: "linkbtn", onclick: () => { keyEditing = true; renderAINote(); $("keyBox").scrollIntoView({ behavior: "smooth", block: "start" }); } }, label);
+  if (keyEditing) {
+    n.hidden = true; kb.hidden = false;
+    $("kProv").value = (devAI && devAI.provider) || "gemini";
+    $("kKey").value = (devAI && devAI.key) || "";
+    $("kModel").value = (devAI && devAI.model) || "";
+    $("kHelp").textContent = AI_HELP[$("kProv").value];
+    syncKeyLinks();
+    $("bKeyCancel").hidden = false;
+    $("bKeyDel").hidden = !(devAI && devAI.key);
+  } else if (useServer()) {
+    n.className = "capnote ok"; n.hidden = false; kb.hidden = true;
+    const needPass = aiInfo.needPasscode && !store.get("pass", "");
+    n.append("선생님 서버에 연결됐어요 · " + (aiInfo.provider || "AI") + (needPass ? " · 처음 한 번만 아래에 비밀번호를 넣어 주세요" : ""));
+  } else if (devAI && devAI.key) {
+    n.className = "capnote ok"; n.hidden = false; kb.hidden = true;
+    n.append(`이 기기에 넣은 키로 연결됐어요 · ${AI_NAMES[devAI.provider]} `, advLink("키 바꾸기"));
+    if (!CAN_STORE) n.append(H("div", { class: "subnote" }, "파일로 열어서 키가 저장되지 않아요. 다음에 열면 다시 넣어야 해요."));
+  } else {
+    n.className = "capnote warn"; n.hidden = false; kb.hidden = true;
+    n.append(aiInfo.none ? "아직 선생님 서버가 연결되지 않았어요. 선생님께 앱 주소를 받아서 열어 주세요."
+      : aiInfo.offline ? "선생님 서버에 연결하지 못했어요. 인터넷 연결을 확인하고 잠시 뒤 다시 열어 주세요."
+      : "선생님 서버에 아직 AI가 설정되지 않았어요. 선생님께 알려 주세요.");
+    n.append(H("div", { class: "subnote" }, "직접 키가 있는 분은 ", advLink("고급 설정: 내 AI 키로 쓰기"), "를 눌러도 돼요."));
+  }
+  const savedPass = store.get("pass", "");
+  if (useServer() && aiInfo.needPasscode && !$("qPass").value) $("qPass").value = savedPass;
+  $("passFld").hidden = !(useServer() && aiInfo.needPasscode && !savedPass);
+}
+function guessProvider(key) { return /^AIza/.test(key) ? "gemini" : /^sk-ant-/.test(key) ? "anthropic" : /^sk-/.test(key) ? "openai" : null; }
+function syncKeyLinks() {
+  const p = $("kProv").value;
+  const url = { gemini: "https://aistudio.google.com/app/apikey", openai: "https://platform.openai.com/api-keys", anthropic: "https://console.anthropic.com/settings/keys" }[p];
+  $("kGet").href = url;
+  $("kGet").textContent = "① " + { gemini: "구글", openai: "OpenAI", anthropic: "Anthropic" }[p] + "에서 키 받기 ↗";
+}
+async function pasteKey() {
+  let txt = "";
+  try { txt = (await navigator.clipboard.readText() || "").trim(); } catch (e) {}
+  if (!txt) { $("kKey").focus(); toast("키 칸을 길게 눌러서 ‘붙여넣기’를 골라 주세요."); return; }
+  const g = guessProvider(txt);
+  if (!g) { toast("복사한 내용이 API 키가 아닌 것 같아요. 키를 다시 복사해 주세요."); return; }
+  $("kKey").value = txt; $("kProv").value = g; syncKeyLinks();
+  saveKey();
+}
+function saveKey() {
+  const key = $("kKey").value.trim(), model = $("kModel").value.trim();
+  const g = guessProvider(key);
+  if (g) $("kProv").value = g;
+  const provider = $("kProv").value;
+  if (key.length < 12) { toast("API 키를 붙여 넣어 주세요."); $("kKey").focus(); return; }
+  devAI = { provider, key, model };
+  store.set("ai", devAI);
+  keyEditing = false; renderAINote(); VS.aiRestUntil = 0; updateVoiceBar();
+  toast(CAN_STORE ? "키를 이 기기에 저장했어요." : "키를 넣었어요. (파일로 열어서 이번에만 쓸 수 있어요)");
+  if (pendingKeyGen && (genImg || $("qText").value.trim())) { pendingKeyGen = false; hideErr(); generate(); }
+}
+function friendlyAI(status, msg, label, model) {
+  if (status === 400 && /api key|API_KEY|invalid.*key/i.test(msg || "")) status = 401;
+  if (status === 401 || status === 403) return `${label} API 키가 맞지 않거나 권한이 없어요. ‘키 바꾸기’에서 키를 다시 확인해 주세요.`;
+  if (status === 404) return `${label}에서 모델 '${model}'을 찾지 못했어요. ‘키 바꾸기’의 모델 칸에 지금 쓸 수 있는 모델 이름을 넣어 주세요.`;
+  if (status === 429) return `${label} 사용량 한도에 걸렸어요. 잠시 뒤 다시 해 보거나 무료 한도·요금제를 확인해 주세요.`;
+  return `${label} 오류: ${msg || "HTTP " + status}`;
+}
+// 서버 없이 휴대폰에서 AI를 바로 불러요
+async function callDirect(cfg, prompt, dataUrl, signal) {
+  const m = dataUrl ? /^data:([^;]+);base64,(.+)$/.exec(dataUrl) : null;
+  const img = m ? { mime: m[1], data: m[2] } : null;
+  const model = cfg.model || AI_DEFAULT[cfg.provider], label = AI_NAMES[cfg.provider];
+  let r, j, out = "";
+  try {
+    if (cfg.provider === "openai") {
+      const content = [{ type: "input_text", text: prompt }];
+      if (img) content.push({ type: "input_image", image_url: dataUrl });
+      r = await fetch("https://api.openai.com/v1/responses", { method: "POST", signal, headers: { "content-type": "application/json", authorization: "Bearer " + cfg.key },
+        body: JSON.stringify({ model, input: [{ role: "user", content }], text: { format: { type: "json_object" } }, max_output_tokens: 32000 }) });
+    } else if (cfg.provider === "anthropic") {
+      const content = [];
+      if (img) content.push({ type: "image", source: { type: "base64", media_type: img.mime, data: img.data } });
+      content.push({ type: "text", text: prompt });
+      r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal, headers: { "content-type": "application/json", "x-api-key": cfg.key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({ model, max_tokens: 16000, messages: [{ role: "user", content }] }) });
+    } else {
+      const parts = [];
+      if (img) parts.push({ inlineData: { mimeType: img.mime, data: img.data } });
+      parts.push({ text: prompt });
+      r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(cfg.key)}`, { method: "POST", signal, headers: { "content-type": "application/json" },
+        body: JSON.stringify({ contents: [{ role: "user", parts }], generationConfig: { responseMimeType: "application/json", temperature: 0.4, maxOutputTokens: 32768 } }) });
+    }
+  } catch (e) {
+    if (signal.aborted) throw e;
+    throw new Error(`${label}에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.`);
+  }
+  try { j = await r.json(); } catch (e) { j = {}; }
+  if (!r.ok) throw new Error(friendlyAI(r.status, j && j.error && (j.error.message || j.error.type), label, model));
+  if (cfg.provider === "openai") {
+    out = typeof j.output_text === "string" ? j.output_text : (j.output || []).filter(o => o.type === "message").flatMap(o => o.content || []).filter(c => c.type === "output_text").map(c => c.text).join("");
+  } else if (cfg.provider === "anthropic") {
+    out = (j.content || []).filter(c => c.type === "text").map(c => c.text).join("");
+  } else {
+    const cand = (j.candidates || [])[0] || {};
+    out = ((cand.content && cand.content.parts) || []).filter(x => typeof x.text === "string" && !x.thought).map(x => x.text).join("");
+    if (!out && (cand.finishReason || (j.promptFeedback && j.promptFeedback.blockReason))) throw new Error(`${label}가 답을 주지 않았어요 (${cand.finishReason || j.promptFeedback.blockReason}). 사진을 바꿔 다시 해 보세요.`);
+  }
+  if (!out) throw new Error(`${label}에서 빈 답이 왔어요. 다시 한 번 눌러 주세요.`);
+  return { text: out, provider: label, model };
+}
+const blobToDataURL = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(new Error("사진을 읽지 못했어요.")); r.readAsDataURL(b); });
+
+function downscale(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const m = 2000, s = Math.min(1, m / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth * s)), h = Math.max(1, Math.round(img.naturalHeight * s));
+      const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+      const cx = cv.getContext("2d"); cx.fillStyle = "#fff"; cx.fillRect(0, 0, w, h); cx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      cv.toBlob(b => b ? res(b) : rej(new Error("사진을 바꾸지 못했어요.")), "image/jpeg", 0.9);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error(/heic|heif/i.test(file.type + file.name) ? "HEIC 사진은 열 수 없어요. 카메라 설정에서 '높은 호환성(JPG)'으로 바꾸거나 스크린샷으로 올려 주세요." : "이 사진은 열 수 없어요. 다른 사진으로 해 주세요.")); };
+    img.src = url;
+  });
+}
+function setImage(file, auto) {
+  if (!file || (file.type && !/^image\//.test(file.type))) { showErr("사진 파일만 올릴 수 있어요."); return; }
+  if (genAbort) { toast("강의를 만드는 중이에요. 끝나면 다시 올려 주세요."); return; }
+  hideErr();
+  $("dropInner").hidden = true; $("previewBox").hidden = false;
+  $("preview").removeAttribute("src");
+  downscale(file).then(blob => {
+    genImg = blob;
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    previewUrl = URL.createObjectURL(blob);
+    $("preview").src = previewUrl;
+    if (auto) generate(); else $("bGen").scrollIntoView({ behavior: "smooth", block: "center" });
+  }, e => { clearImage(); showErr(e.message); });
+}
+function clearImage() { genImg = null; $("previewBox").hidden = true; $("preview").removeAttribute("src"); $("dropInner").hidden = false; }
+function showErr(m) { const e = $("genErr"); e.textContent = m; e.hidden = false; setTimeout(() => e.scrollIntoView({ behavior: "smooth", block: "center" }), 60); }
+function hideErr() { $("genErr").hidden = true; }
+
+function parseJSON(t) {
+  let s = String(t || "").replace(/```(?:json)?/gi, "");
+  const a = s.indexOf("{"), b = s.lastIndexOf("}");
+  if (a < 0 || b <= a) throw new Error("대본을 읽지 못했어요. 다시 시도해 주세요.");
+  s = s.slice(a, b + 1);
+  try { return JSON.parse(s); } catch (e) {}
+  try { return JSON.parse(s.replace(/,\s*([}\]])/g, "$1")); } catch (e) {}
+  throw new Error("대본을 읽지 못했어요. 다시 시도해 주세요.");
+}
+function genBusy(on) {
+  $("bGen").disabled = on; $("bCancel").hidden = !on; $("genStat").hidden = !on;
+  $("previewBox").querySelectorAll(".filebtn,button").forEach(b => b.classList.toggle("off", on));
+  $("previewBox").querySelectorAll("input").forEach(i => { i.disabled = on; });
+  if (on) setTimeout(() => $("genStat").scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  if (!on) clearInterval(genTimer);
+}
+async function generate() {
+  if (genAbort || $("bGen").disabled) return;
+  const text = $("qText").value.trim(), memo = $("qMemo").value.trim(), pass = $("qPass").value.trim();
+  hideErr();
+  if (!genImg && !text) { showErr("문제 사진을 올리거나 문제를 글로 적어 주세요."); return; }
+  if (!aiInfo) await checkAI();
+  const direct = !useServer();
+  if (direct && !(devAI && devAI.key)) {
+    if (keyEditing) { pendingKeyGen = true; showErr("위에 AI 키를 넣고 ‘저장’을 누르면 바로 강의 만들기가 시작돼요."); return; }
+    aiChecking = null; await checkAI();
+    if (!useServer()) { showErr(aiInfo && aiInfo.offline ? "선생님 서버에 연결하지 못해서 강의를 만들 수 없어요. 인터넷 연결을 확인하고 다시 눌러 주세요." : "선생님 서버에 AI가 설정되지 않아서 강의를 만들 수 없어요."); return; }
+  }
+  const viaServer = useServer();
+  if (viaServer && aiInfo.needPasscode && !pass) { $("passFld").hidden = false; showErr("위 칸에 강의 만들기 비밀번호를 넣고 ‘강의 만들기’를 눌러 주세요."); setTimeout(() => $("qPass").focus(), 350); return; }
+  genBusy(true);
+  const ac = new AbortController(); genAbort = ac;
+  const t0 = Date.now();
+  const msgs = ["문제를 읽는 중…", "풀이 방법을 고르는 중…", "그림 좌표를 잡는 중…", "칠판 대본을 쓰는 중…", "계산을 다시 확인하는 중…", "거의 다 됐어요…"];
+  const paint = () => { const sec = Math.round((Date.now() - t0) / 1000); $("genMsg").textContent = msgs[Math.min(msgs.length - 1, Math.floor(sec / 15))]; $("genSub").textContent = `${sec}초 지남 · 보통 30초~2분 걸려요`; };
+  paint(); genTimer = setInterval(paint, 1000);
+  try {
+    const payload = { text, memo, passcode: pass };
+    if (genImg) payload.image = await blobToDataURL(genImg);
+    let j = null;
+    if (!viaServer) {
+      j = await callDirect(devAI, buildPrompt(text, memo, !!payload.image), payload.image, ac.signal);
+    } else {
+    let r;
+    try { r = await fetch(API_BASE + "/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), signal: ac.signal }); }
+    catch (e) { if (ac.signal.aborted) throw e; throw new Error("선생님 서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요."); }
+    try { j = await r.json(); } catch (e) {}
+    if (!r.ok || !j || !j.ok) {
+      if (j && j.code === "passcode") { store.set("pass", ""); $("passFld").hidden = false; $("qPass").value = ""; setTimeout(() => $("qPass").focus(), 300); }
+      throw new Error((j && j.error) || (r.status === 504 ? "AI 답이 너무 오래 걸렸어요. 다시 한 번 눌러 주세요." : `서버 오류가 났어요 (${r.status}).`));
+    }
+    if (pass) store.set("pass", pass);
+    }
+    $("genMsg").textContent = "강의로 엮는 중…";
+    const L = normalizeLecture(parseJSON(j.text));
+    const item = saveMine(L, (j.provider || "") + (j.model ? " · " + j.model : ""));
+    if (!CAN_STORE) toast("파일로 열어서 강의가 저장되지 않아요. 다 보면 ‘파일로 저장’을 눌러 두세요.");
+    genBusy(false);
+    $("qText").value = ""; $("qMemo").value = ""; clearImage();
+    go("lec-" + item.id);
+  } catch (e) {
+    genBusy(false);
+    if (ac.signal.aborted) showErr("강의 만들기를 그만뒀어요.");
+    else showErr((e && e.message) || "강의를 만들지 못했어요. 다시 시도해 주세요.");
+  } finally { genAbort = null; }
+}
+function wireNew() {
+  let camTimer = 0, camCancel = null;
+  const showCamHint = () => {
+    if ($("v-new").hidden) go("new");
+    const n = $("camHint"); n.hidden = false;
+    setTimeout(() => n.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
+    document.querySelectorAll(".filebtn[data-pick]").forEach(b => { b.classList.remove("pulse"); void b.offsetWidth; b.classList.add("pulse"); });
+  };
+  document.querySelectorAll('input[type=file][data-kind]').forEach(inp => {
+    inp.addEventListener("change", () => {
+      if (camCancel) camCancel();
+      const f = inp.files && inp.files[0];
+      if (f) { $("camHint").hidden = true; if ($("v-new").hidden) go("new"); setImage(f, inp.dataset.kind === "cam"); }
+      inp.value = "";
+    });
+    if (inp.dataset.kind === "cam") inp.addEventListener("click", () => {
+      if (camCancel) camCancel();
+      const cancel = () => { clearTimeout(camTimer); window.removeEventListener("blur", cancel); document.removeEventListener("visibilitychange", cancel); camCancel = null; };
+      camCancel = cancel;
+      window.addEventListener("blur", cancel); document.addEventListener("visibilitychange", cancel);
+      camTimer = setTimeout(() => { cancel(); showCamHint(); }, 1600);
+    });
+  });
+  const d = $("drop");
+  d.addEventListener("dragover", e => { e.preventDefault(); d.classList.add("over"); });
+  d.addEventListener("dragleave", () => d.classList.remove("over"));
+  d.addEventListener("drop", e => { e.preventDefault(); d.classList.remove("over"); const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) setImage(f); });
+  window.addEventListener("paste", e => {
+    if ($("v-new").hidden) return;
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    for (const it of items) if (it.kind === "file" && /^image\//.test(it.type)) { setImage(it.getAsFile()); e.preventDefault(); return; }
+  });
+  $("bClearImg").onclick = e => { e.preventDefault(); if (!genAbort) clearImage(); };
+  $("bGen").onclick = generate;
+  $("qPass").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); generate(); } });
+  $("bKeySave").onclick = saveKey;
+  $("bKeyCancel").onclick = () => { keyEditing = false; pendingKeyGen = false; renderAINote(); };
+  $("bKeyDel").onclick = () => { devAI = null; store.set("ai", null); keyEditing = false; renderAINote(); toast("이 기기에 넣은 키를 지웠어요."); };
+  $("kProv").onchange = () => { $("kHelp").textContent = AI_HELP[$("kProv").value]; $("kModel").placeholder = "비워 두면 " + AI_DEFAULT[$("kProv").value]; syncKeyLinks(); };
+  $("bKeyPaste").onclick = pasteKey;
+  $("kKey").addEventListener("paste", () => setTimeout(() => { const v = $("kKey").value.trim(), g = guessProvider(v); if (g && v.length >= 30) { $("kProv").value = g; syncKeyLinks(); saveKey(); } }, 50));
+  $("bCancel").onclick = () => { if (genAbort) genAbort.abort(); };
+}
+
+/* ---------- 공유 강의 묶음 + 앱 설치 ---------- */
+function loadLibrary() {
+  fetch("/lectures/library.json", { cache: "no-cache" }).then(r => r.ok ? r.json() : []).then(arr => {
+    if (!Array.isArray(arr)) return;
+    libLecs = arr.map((x, i) => { try { return Object.assign(normalizeLecture(x), { id: "lib-" + (String(x.id || i).replace(/[^a-zA-Z0-9-]/g, "") || i), origin: "lib" }); } catch (e) { return null; } }).filter(Boolean);
+    renderHome();
+    if (/^#lec-lib-/.test(location.hash) && $("v-player").hidden) route();
+  }).catch(() => {});
+}
+function wireExtras() {
+  $("importIn").addEventListener("change", e => { const fs = [...(e.target.files || [])]; e.target.value = ""; if (fs.length) importFiles(fs); });
+  $("bInstall").onclick = async () => { if (!installEvt) return; installEvt.prompt(); try { await installEvt.userChoice; } catch (e) {} installEvt = null; renderInstall(); };
+  $("bInstallX").onclick = () => { store.set("installX", true); renderInstall(); };
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register("/sw.js").catch(() => {});
+}
+
+/* ---------- 시작 ---------- */
+try { if (matchMedia("(pointer: coarse)").matches || "ontouchstart" in window) document.body.classList.add("touch"); } catch (e) {}
+drawRules();
+wireControls();
+wireNew();
+initWebVoice();
+wireExtras();
+wireVoice();
+syncButtons();
+route();
+loadLibrary();
+requestAnimationFrame(loop);
+fontP.then(() => {
+  renderHome();
+  if (P.lec && !P.compFonts && !P.playing && P.t === 0) { const L = P.lec; P.lec = null; openLecture(L); }
+});
+})();
+
+</script>
+</body>
+</html>
