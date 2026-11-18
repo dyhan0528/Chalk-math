@@ -158,6 +158,10 @@ textarea:focus,input.txt:focus{outline:2px solid rgba(31,94,71,.25);border-color
 .passtop{margin:0 0 16px}
 .capnote.ok{background:#eef5f1;border-color:#cfe3d8}
 .capnote.warn{background:#fff6e9;border-color:#f1d9b5}
+.capnote.connect{background:#eef5f1;border-color:#cfe3d8;text-align:center;padding:18px 16px}
+.capnote.connect>b{font-size:17px}
+.capnote.connect .connbtn{margin:14px auto 6px;min-width:220px}
+.vlist .connbtn{margin:6px 0 2px;height:44px;min-width:180px}
 .modal{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;padding:16px}
 .sheet{background:var(--surf);border-radius:16px;padding:18px;max-width:520px;width:100%;margin-bottom:env(safe-area-inset-bottom)}
 .sheet h3{margin:0 0 6px}
@@ -1174,12 +1178,120 @@ const VOICE_SAMPLE = "안녕! 오늘도 칠판에 같이 풀어 보자. 그림�
 function aiSource() {
   if (VS.server && VS.server.ok && API_BASE != null) return { via: "server", provider: VS.server.provider };
   if (devAI && devAI.key && (devAI.provider === "gemini" || devAI.provider === "openai")) return { via: "direct", provider: devAI.provider };
+  if (puterReady()) return { via: "puter", provider: "openai" };
   return null;
 }
 function aiVoiceName(provider) { const list = AI_VOICES[provider]; const v = VS.aiVoice[provider]; return list.some(x => x[0] === v) ? v : list[0][0]; }
 function aiVoiceDesc(provider, name) { const f = AI_VOICES[provider].find(x => x[0] === name); return f ? f[1] : name; }
 const useAI = () => VS.mode === "ai" && !!aiSource() && performance.now() > VS.aiRestUntil;
 function voiceUsable() { return P.voiceOn && (useAI() || (!!VOICE.kind && performance.now() > P.restUntil)); }
+
+/* ---------- 버튼 한 번으로 AI 연결 (Puter) ----------
+   키 없이 Puter 계정으로 로그인만 하면 AI(사진 읽기·대본 쓰기)와 AI 목소리를 써요.
+   사용량은 로그인한 사람의 Puter 계정에서 나가요 (매달 무료 사용량이 있어요). */
+const PUTER_SRC = "https://js.puter.com/v2/";
+const PUTER_CHAT_MODELS = ["google/gemini-2.5-flash", "openai/gpt-5.4-mini", ""];   // "" = Puter 기본 모델
+let puterP = null, puterOn = !!store.get("puter", false), puterBusy = false, pendingConnectGen = false;
+function loadPuter() {
+  if (window.puter && window.puter.ai) return Promise.resolve(window.puter);
+  if (puterP) return puterP;
+  puterP = new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = PUTER_SRC; s.async = true;
+    const tm = setTimeout(() => { puterP = null; rej(new Error("AI 연결 도구를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.")); }, 20000);
+    s.onload = () => { clearTimeout(tm); window.puter && window.puter.ai ? res(window.puter) : (puterP = null, rej(new Error("AI 연결 도구를 불러오지 못했어요."))); };
+    s.onerror = () => { clearTimeout(tm); puterP = null; s.remove(); rej(new Error("AI 연결 도구를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.")); };
+    document.head.appendChild(s);
+  });
+  return puterP;
+}
+function puterSignedIn() { try { return !!(window.puter && window.puter.auth && window.puter.auth.isSignedIn()); } catch (e) { return false; } }
+const puterReady = () => puterOn && puterSignedIn();
+// 앱을 열 때: 전에 연결했으면 조용히 다시 확인하고, 아니면 버튼을 누를 때 바로 열리게 미리 불러 둬요
+function warmPuter() {
+  loadPuter().then(() => {
+    if (puterOn && !puterSignedIn()) { puterOn = false; store.set("puter", false); }
+    renderAINote(); updateVoiceBar();
+  }, () => {});
+}
+function errText(e) {
+  if (!e) return "";
+  if (typeof e === "string") return e;
+  const m = e.message || (e.error && (e.error.message || e.error.code || e.error)) || e.code || "";
+  if (m) return String(m);
+  try { return JSON.stringify(e); } catch (x) { return String(e); }
+}
+async function connectPuter() {
+  if (puterBusy) return;
+  puterBusy = true; renderAINote();
+  try {
+    const pt = (window.puter && window.puter.auth) ? window.puter : await loadPuter();
+    if (!puterSignedIn()) await pt.auth.signIn();
+    if (!puterSignedIn()) throw new Error("로그인이 끝나지 않았어요.");
+    puterOn = true; store.set("puter", true);
+    VS.aiRestUntil = 0; VS.fails = 0;
+    toast("AI에 연결됐어요. 이제 사진만 찍으면 강의를 만들어요.");
+    puterBusy = false; renderAINote(); updateVoiceBar();
+    if ($("voiceModal") && !$("voiceModal").hidden) renderVoiceSheet();
+    if (pendingConnectGen && (genImg || $("qText").value.trim())) { pendingConnectGen = false; hideErr(); generate(); }
+  } catch (e) {
+    puterBusy = false; renderAINote();
+    const m = errText(e);
+    if (/popup|blocked/i.test(m)) toast("로그인 창이 막혔어요. ‘AI 연결하기’를 한 번 더 눌러 주세요.");
+    else if (!IS_WEB) toast("파일로 열면 연결이 안 될 수 있어요. 앱 주소로 열어서 다시 눌러 주세요.");
+    else toast("연결하지 못했어요. 로그인 창에서 끝까지 진행했는지 확인하고 다시 눌러 주세요.");
+  }
+}
+function disconnectPuter() {
+  puterOn = false; store.set("puter", false);
+  try { if (window.puter && window.puter.auth) window.puter.auth.signOut(); } catch (e) {}
+  renderAINote(); updateVoiceBar(); toast("AI 연결을 끊었어요.");
+}
+const withAbort = (p, signal) => new Promise((res, rej) => {
+  if (signal && signal.aborted) { rej(new DOMException("그만둠", "AbortError")); return; }
+  const on = () => rej(new DOMException("그만둠", "AbortError"));
+  if (signal) signal.addEventListener("abort", on, { once: true });
+  p.then(v => { if (signal) signal.removeEventListener("abort", on); res(v); }, e => { if (signal) signal.removeEventListener("abort", on); rej(e); });
+});
+function puterOut(r) {
+  if (r == null) return "";
+  if (typeof r === "string") return r;
+  const c = r.message ? r.message.content : (r.content != null ? r.content : r.text);
+  if (typeof c === "string") return c;
+  if (Array.isArray(c)) return c.map(x => typeof x === "string" ? x : (x && (x.text || ""))).join("");
+  const s = String(r);
+  return s === "[object Object]" ? "" : s;
+}
+function friendlyPuter(e) {
+  const m = errText(e);
+  if (/insufficient|funds|credit|quota|usage|limit|upgrade|balance/i.test(m)) return "Puter 무료 사용량을 이번 달에 다 썼어요. 다음 달에 다시 쓰거나, Puter 계정의 요금제를 확인해 주세요.";
+  if (/auth|sign|login|token|401|403/i.test(m)) { puterOn = false; store.set("puter", false); renderAINote(); return "AI 연결이 끊겼어요. 위의 ‘AI 연결하기’를 다시 눌러 주세요."; }
+  if (/network|fetch|connect|offline/i.test(m)) return "AI에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.";
+  return "AI가 강의를 만들지 못했어요. 다시 한 번 눌러 주세요." + (m ? " (" + m.slice(0, 120) + ")" : "");
+}
+async function callPuter(prompt, blob, signal) {
+  const pt = await loadPuter();
+  if (!puterSignedIn()) { puterOn = false; store.set("puter", false); renderAINote(); throw new Error("AI 연결이 끊겼어요. 위의 ‘AI 연결하기’를 다시 눌러 주세요."); }
+  const file = blob ? new File([blob], "problem.jpg", { type: blob.type || "image/jpeg" }) : null;
+  const models = store.get("puterModel", "") ? [store.get("puterModel", ""), ...PUTER_CHAT_MODELS.filter(m => m !== store.get("puterModel", ""))] : PUTER_CHAT_MODELS;
+  let last = null;
+  for (const model of models) {
+    const opt = { temperature: 0.4 };
+    if (model) opt.model = model;
+    try {
+      const r = await withAbort(file ? pt.ai.chat(prompt, file, false, opt) : pt.ai.chat(prompt, opt), signal);
+      const out = puterOut(r);
+      if (out && /[{]/.test(out)) { if (model !== store.get("puterModel", "")) store.set("puterModel", model); return { text: out, provider: "Puter", model: model || "기본 모델" }; }
+      last = new Error("빈 답이 왔어요");
+    } catch (e) {
+      if (signal && signal.aborted) throw e;
+      last = e;
+      const m = errText(e);
+      if (/insufficient|funds|credit|quota|upgrade|balance|auth|sign|login|token/i.test(m)) break;
+    }
+  }
+  throw new Error(friendlyPuter(last));
+}
 
 /* 기기 목소리 */
 function initWebVoice() {
@@ -1264,6 +1376,16 @@ async function synth(src, voice, text) {
   if (src.via === "server") {
     const r = await fetch(API_BASE + "/api/tts", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text, voice }) });
     if (!r.ok) { let j = {}; try { j = await r.json(); } catch (e) {} throw ttsErr(r.status, j.error); }
+    return await r.blob();
+  }
+  if (src.via === "puter") {
+    let audio;
+    try { audio = await window.puter.ai.txt2speech(text, { provider: "openai", model: "gpt-4o-mini-tts", voice, instructions: OAI_TTS_INSTR }); }
+    catch (e) { const m = errText(e); throw ttsErr(/insufficient|funds|credit|quota|limit|upgrade|balance/i.test(m) ? 429 : /auth|sign|login|token/i.test(m) ? 401 : 500, m); }
+    const url = audio && (audio.src || audio.currentSrc);
+    if (!url) throw ttsErr(500, "빈 음성이 왔어요");
+    const r = await fetch(url);
+    if (!r.ok) throw ttsErr(r.status, "음성을 받지 못했어요");
     return await r.blob();
   }
   if (src.provider === "openai") {
@@ -1406,9 +1528,10 @@ function renderVoiceSheet() {
   const note = $("vAINote"), list = $("vAIList");
   list.textContent = "";
   if (!src) {
-    note.textContent = "AI 목소리는 Gemini나 OpenAI 키가 있어야 만들 수 있어요. ‘+ 새 강의’ 화면의 AI 키 넣기에 키를 넣어 주세요. (Claude API 키로는 목소리를 만들 수 없어서 기기 목소리로 읽어요)";
+    note.textContent = "AI 목소리는 AI에 연결하면 쓸 수 있어요. 버튼 한 번이면 돼요.";
+    list.append(H("button", { class: "btn primary connbtn", onclick: connectPuter }, puterBusy ? "연결하는 중…" : "AI 연결하기"));
   } else {
-    note.textContent = (src.provider === "gemini" ? "Google Gemini" : "OpenAI") + " 목소리예요. 처음 읽을 때 한 번 만들어서 이 기기에 저장해 두고, 다음부터는 바로 재생해요.";
+    note.textContent = (src.via === "puter" ? "Puter로 연결한 OpenAI" : src.provider === "gemini" ? "Google Gemini" : "OpenAI") + " 목소리예요. 처음 읽을 때 한 번 만들어서 이 기기에 저장해 두고, 다음부터는 바로 재생해요.";
     const cur = aiVoiceName(src.provider);
     for (const [name, desc] of AI_VOICES[src.provider]) {
       const row = H("div", { class: "vitem" + (name === cur ? " on" : "") },
@@ -1436,6 +1559,7 @@ function wireVoice() {
   $("vmAI").onclick = () => { VS.mode = "ai"; store.set("voiceMode", "ai"); VS.aiRestUntil = 0; renderVoiceSheet(); };
   $("vmDev").onclick = () => { VS.mode = "device"; store.set("voiceMode", "device"); renderVoiceSheet(); };
   checkAI();
+  if (puterOn) warmPuter();
 }
 
 /* ---------- 재생 ---------- */
@@ -1737,12 +1861,16 @@ function renderAINote() {
     n.className = "capnote ok"; n.hidden = false; kb.hidden = true;
     n.append(`이 기기에 넣은 키로 연결됐어요 · ${AI_NAMES[devAI.provider]} `, advLink("키 바꾸기"));
     if (!CAN_STORE) n.append(H("div", { class: "subnote" }, "파일로 열어서 키가 저장되지 않아요. 다음에 열면 다시 넣어야 해요."));
+  } else if (puterReady()) {
+    n.className = "capnote ok"; n.hidden = false; kb.hidden = true;
+    n.append("AI에 연결됐어요 · Puter 계정 ", H("button", { class: "linkbtn", onclick: disconnectPuter }, "연결 끊기"));
   } else {
-    n.className = "capnote warn"; n.hidden = false; kb.hidden = true;
-    n.append(aiInfo.none ? "아직 선생님 서버가 연결되지 않았어요. 선생님께 앱 주소를 받아서 열어 주세요."
-      : aiInfo.offline ? "선생님 서버에 연결하지 못했어요. 인터넷 연결을 확인하고 잠시 뒤 다시 열어 주세요."
-      : "선생님 서버에 아직 AI가 설정되지 않았어요. 선생님께 알려 주세요.");
-    n.append(H("div", { class: "subnote" }, "직접 키가 있는 분은 ", advLink("고급 설정: 내 AI 키로 쓰기"), "를 눌러도 돼요."));
+    n.className = "capnote connect"; n.hidden = false; kb.hidden = true;
+    n.append(H("b", null, "AI에 연결해 주세요"),
+      H("div", { class: "subnote" }, "버튼 한 번이면 돼요. 처음 한 번만 무료 Puter 계정으로 로그인하면, 다음부터는 사진만 찍으면 강의가 만들어져요. 키는 필요 없어요."),
+      (() => { const b = H("button", { class: "btn primary big connbtn", id: "bConnect", onclick: connectPuter }, puterBusy ? "연결하는 중…" : "AI 연결하기"); b.disabled = puterBusy; return b; })(),
+      H("div", { class: "subnote" }, "직접 키가 있는 분은 ", advLink("고급 설정: 내 AI 키로 쓰기"), "를 눌러도 돼요."));
+    if (!puterP && !window.puter) warmPuter();
   }
   const savedPass = store.get("pass", "");
   if (useServer() && aiInfo.needPasscode && !$("qPass").value) $("qPass").value = savedPass;
@@ -1883,13 +2011,17 @@ async function generate() {
   hideErr();
   if (!genImg && !text) { showErr("문제 사진을 올리거나 문제를 글로 적어 주세요."); return; }
   if (!aiInfo) await checkAI();
-  const direct = !useServer();
-  if (direct && !(devAI && devAI.key)) {
+  if (!useServer() && !(devAI && devAI.key) && !puterReady()) {
     if (keyEditing) { pendingKeyGen = true; showErr("위에 AI 키를 넣고 ‘저장’을 누르면 바로 강의 만들기가 시작돼요."); return; }
     aiChecking = null; await checkAI();
-    if (!useServer()) { showErr(aiInfo && aiInfo.offline ? "선생님 서버에 연결하지 못해서 강의를 만들 수 없어요. 인터넷 연결을 확인하고 다시 눌러 주세요." : "선생님 서버에 AI가 설정되지 않아서 강의를 만들 수 없어요."); return; }
+    if (!useServer() && !puterReady()) {
+      pendingConnectGen = true; renderAINote();
+      showErr("먼저 위의 ‘AI 연결하기’를 눌러 주세요. 연결되면 이 문제로 바로 강의를 만들어요.");
+      const b = $("bConnect"); if (b) setTimeout(() => { b.scrollIntoView({ behavior: "smooth", block: "center" }); b.classList.remove("pulse"); void b.offsetWidth; b.classList.add("pulse"); }, 120);
+      return;
+    }
   }
-  const viaServer = useServer();
+  const viaServer = useServer(), viaKey = !viaServer && !!(devAI && devAI.key);
   if (viaServer && aiInfo.needPasscode && !pass) { $("passFld").hidden = false; showErr("위 칸에 강의 만들기 비밀번호를 넣고 ‘강의 만들기’를 눌러 주세요."); setTimeout(() => $("qPass").focus(), 350); return; }
   genBusy(true);
   const ac = new AbortController(); genAbort = ac;
@@ -1901,8 +2033,10 @@ async function generate() {
     const payload = { text, memo, passcode: pass };
     if (genImg) payload.image = await blobToDataURL(genImg);
     let j = null;
-    if (!viaServer) {
+    if (viaKey) {
       j = await callDirect(devAI, buildPrompt(text, memo, !!payload.image), payload.image, ac.signal);
+    } else if (!viaServer) {
+      j = await callPuter(buildPrompt(text, memo, !!genImg), genImg, ac.signal);
     } else {
     let r;
     try { r = await fetch(API_BASE + "/api/generate", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload), signal: ac.signal }); }
