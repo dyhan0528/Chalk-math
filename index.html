@@ -1192,7 +1192,15 @@ function voiceUsable() { return P.voiceOn && (useAI() || (!!VOICE.kind && perfor
    키 없이 Puter 계정으로 로그인만 하면 AI(사진 읽기·대본 쓰기)와 AI 목소리를 써요.
    사용량은 로그인한 사람의 Puter 계정에서 나가요 (매달 무료 사용량이 있어요). */
 const PUTER_SRC = "https://js.puter.com/v2/";
-const PUTER_CHAT_MODELS = ["google/gemini-2.5-flash", "openai/gpt-5.4-mini", ""];   // "" = Puter 기본 모델
+// 빠른 순서: 생각을 짧게 하도록 reasoning_effort를 낮춰요. 마지막 "" = Puter 기본 모델
+const PUTER_CHAT_MODELS = [
+  { model: "gemini-3-flash-preview", reasoning_effort: "low" },
+  { model: "gemini-3.1-flash-lite", reasoning_effort: "low" },
+  { model: "gemini-flash-latest" },
+  { model: "" }
+];
+const PUTER_STALL_MS = window.__stallMs || 120000;   // 이만큼 아무것도 안 오면 다음 모델로
+let genChars = 0;
 let puterP = null, puterOn = !!store.get("puter", false), puterBusy = false, pendingConnectGen = false, puterErr = "";
 // 로그인 창(새 창)이 열리지 않는 곳: 카카오톡 같은 앱 안 브라우저, 아이폰 홈 화면 앱
 const UA = navigator.userAgent || "";
@@ -1310,30 +1318,52 @@ function friendlyPuter(e) {
   if (/network|fetch|connect|offline/i.test(m)) return "AI에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.";
   return "AI가 강의를 만들지 못했어요. 다시 한 번 눌러 주세요." + (m ? " (" + m.slice(0, 120) + ")" : "");
 }
+const withTimeout = (p, ms) => new Promise((res, rej) => {
+  const t = setTimeout(() => rej({ error: "stall" }), ms);
+  p.then(v => { clearTimeout(t); res(v); }, e => { clearTimeout(t); rej(e); });
+});
+async function readPuter(resp, signal) {
+  if (!resp || typeof resp[Symbol.asyncIterator] !== "function") return puterOut(resp);
+  const it = resp[Symbol.asyncIterator]();
+  let out = "";
+  try {
+    while (true) {
+      const r = await withAbort(withTimeout(it.next(), PUTER_STALL_MS), signal);
+      if (r.done) break;
+      const part = r.value;
+      if (!part) continue;
+      if (part.type === "error") throw { error: { message: part.message || "stream error" } };
+      if (typeof part.text === "string" && (part.type === "text" || !part.type)) { out += part.text; genChars = out.length; }
+    }
+  } catch (e) { try { it.return && it.return(); } catch (x) {} throw e; }
+  return out;
+}
 async function callPuter(prompt, blob, signal) {
   const pt = await loadPuter();
   if (!puterSignedIn()) { puterOn = false; store.set("puter", false); renderAINote(); throw new Error("AI 연결이 끊겼어요. 위의 ‘AI 연결하기’를 다시 눌러 주세요."); }
   const file = blob ? new File([blob], "problem.jpg", { type: blob.type || "image/jpeg" }) : null;
-  const models = store.get("puterModel", "") ? [store.get("puterModel", ""), ...PUTER_CHAT_MODELS.filter(m => m !== store.get("puterModel", ""))] : PUTER_CHAT_MODELS;
+  const saved = store.get("puterModel2", null);
+  const models = saved != null ? [PUTER_CHAT_MODELS[saved], ...PUTER_CHAT_MODELS.filter((_, i) => i !== saved)].filter(Boolean) : PUTER_CHAT_MODELS;
   let last = null;
-  for (const model of models) {
-    const opt = { temperature: 0.4 };
-    if (model) opt.model = model;
+  for (const m of models) {
+    const opt = { stream: true, temperature: 0.4 };
+    if (m.model) opt.model = m.model;
+    if (m.reasoning_effort) opt.reasoning_effort = m.reasoning_effort;
+    genChars = 0;
     try {
-      const r = await withAbort(file ? pt.ai.chat(prompt, file, false, opt) : pt.ai.chat(prompt, opt), signal);
-      const out = puterOut(r);
-      if (out && /[{]/.test(out)) { if (model !== store.get("puterModel", "")) store.set("puterModel", model); return { text: out, provider: "Puter", model: model || "기본 모델" }; }
+      const resp = await withAbort(withTimeout(file ? pt.ai.chat(prompt, file, false, opt) : pt.ai.chat(prompt, opt), PUTER_STALL_MS), signal);
+      const out = await readPuter(resp, signal);
+      if (out && /[{]/.test(out)) { store.set("puterModel2", PUTER_CHAT_MODELS.indexOf(m)); return { text: out, provider: "Puter", model: m.model || "기본 모델" }; }
       last = new Error("빈 답이 왔어요");
     } catch (e) {
       if (signal && signal.aborted) throw e;
       last = e;
-      const m = errText(e);
-      if (/insufficient|funds|credit|quota|upgrade|balance|auth|sign|login|token/i.test(m)) break;
+      if (/insufficient|funds|credit|quota|upgrade|balance|auth|sign|login|token/i.test(errText(e))) break;
     }
   }
+  if (last && last.error === "stall") throw new Error("AI가 너무 오래 답하지 않아요. 잠시 뒤 다시 눌러 주세요.");
   throw new Error(friendlyPuter(last));
 }
-
 /* 기기 목소리 */
 function initWebVoice() {
   if (!("speechSynthesis" in window)) return;
@@ -1422,7 +1452,7 @@ async function synth(src, voice, text) {
   if (src.via === "puter") {
     let audio;
     try { audio = await window.puter.ai.txt2speech(text, { provider: "openai", model: "gpt-4o-mini-tts", voice, instructions: OAI_TTS_INSTR }); }
-    catch (e) { const m = errText(e); throw ttsErr(/insufficient|funds|credit|quota|limit|upgrade|balance/i.test(m) ? 429 : /auth|sign|login|token/i.test(m) ? 401 : 500, m); }
+    catch (e) { const m = errText(e); throw ttsErr(/insufficient|funds|credit|quota|limit|upgrade|balance|too many/i.test(m) ? 429 : /auth|sign|login|token/i.test(m) ? 401 : 500, m); }
     const url = audio && (audio.src || audio.currentSrc);
     if (!url) throw ttsErr(500, "빈 음성이 왔어요");
     const r = await fetch(url);
@@ -2077,7 +2107,12 @@ async function generate() {
   const ac = new AbortController(); genAbort = ac;
   const t0 = Date.now();
   const msgs = ["문제를 읽는 중…", "풀이 방법을 고르는 중…", "그림 좌표를 잡는 중…", "칠판 대본을 쓰는 중…", "계산을 다시 확인하는 중…", "거의 다 됐어요…"];
-  const paint = () => { const sec = Math.round((Date.now() - t0) / 1000); $("genMsg").textContent = msgs[Math.min(msgs.length - 1, Math.floor(sec / 15))]; $("genSub").textContent = `${sec}초 지남 · 보통 30초~2분 걸려요`; };
+  genChars = 0;
+  const paint = () => {
+    const sec = Math.round((Date.now() - t0) / 1000);
+    $("genMsg").textContent = genChars > 0 ? `칠판 대본을 쓰는 중… ${genChars.toLocaleString()}자` : msgs[Math.min(msgs.length - 1, Math.floor(sec / 15))];
+    $("genSub").textContent = `${sec >= 60 ? Math.floor(sec / 60) + "분 " : ""}${sec % 60}초 지남 · 보통 1~2분 걸려요`;
+  };
   paint(); genTimer = setInterval(paint, 1000);
   try {
     const payload = { text, memo, passcode: pass };
