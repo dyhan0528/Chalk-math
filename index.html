@@ -1193,12 +1193,14 @@ function voiceUsable() { return P.voiceOn && (useAI() || (!!VOICE.kind && perfor
    사용량은 로그인한 사람의 Puter 계정에서 나가요 (매달 무료 사용량이 있어요). */
 const PUTER_SRC = "https://js.puter.com/v2/";
 // 빠른 순서: 생각을 짧게 하도록 reasoning_effort를 낮춰요. 마지막 "" = Puter 기본 모델
+// max_tokens를 꼭 정해요: 안 정하면 Puter가 답 최대 길이만큼 요금을 미리 잡아 두는데, 무료 한도(한 달 $0.50)를 넘어 실패해요
+const PUTER_MAX_TOKENS = 16000;
 const PUTER_CHAT_MODELS = [
   { model: "gemini-3-flash-preview", reasoning_effort: "low" },
   { model: "gemini-3.1-flash-lite", reasoning_effort: "low" },
-  { model: "gemini-flash-latest" },
   { model: "" }
 ];
+const PUTER_TOTAL_MS = 240000;   // 모델을 바꿔 가며 기다리는 시간을 모두 합쳐 4분까지만
 const PUTER_STALL_MS = window.__stallMs || 120000;   // 이만큼 아무것도 안 오면 다음 모델로
 let genChars = 0;
 let puterP = null, puterOn = !!store.get("puter", false), puterBusy = false, pendingConnectGen = false, puterErr = "";
@@ -1311,12 +1313,21 @@ function puterOut(r) {
   const s = String(r);
   return s === "[object Object]" ? "" : s;
 }
+function puterCode(e) {
+  if (!e || typeof e !== "object") return "";
+  const c = [e.code, e.errorCode, typeof e.error === "string" ? e.error : null, e.error && e.error.code, e.error && e.error.errorCode].find(x => typeof x === "string" && x);
+  return c || (e.status ? String(e.status) : "");
+}
 function friendlyPuter(e) {
-  const m = errText(e);
-  if (/insufficient|funds|credit|quota|usage|limit|upgrade|balance/i.test(m)) return "Puter 무료 사용량을 이번 달에 다 썼어요. 다음 달에 다시 쓰거나, Puter 계정의 요금제를 확인해 주세요.";
-  if (/auth|sign|login|token|401|403/i.test(m)) { puterOn = false; store.set("puter", false); renderAINote(); return "AI 연결이 끊겼어요. 위의 ‘AI 연결하기’를 다시 눌러 주세요."; }
-  if (/network|fetch|connect|offline/i.test(m)) return "AI에 연결하지 못했어요. 인터넷 연결을 확인해 주세요.";
-  return "AI가 강의를 만들지 못했어요. 다시 한 번 눌러 주세요." + (m ? " (" + m.slice(0, 120) + ")" : "");
+  const code = puterCode(e), m = errText(e), s = code + " " + m;
+  const tail = code ? " (" + code + ")" : (m ? " (" + m.slice(0, 100) + ")" : "");
+  if (/insufficient_funds|credits_reserved|subscription_required|\b402\b|insufficient|balance|upgrade/i.test(s)) return "Puter 무료 사용량(한 달 $0.50)이 모자라요. 다음 달에 다시 쓰거나, puter.com에서 사용량을 확인해 주세요." + tail;
+  if (/email_confirmation_required/i.test(s)) return "Puter 계정의 이메일 인증이 필요해요. Puter에서 온 메일의 인증 링크를 누른 뒤 다시 해 주세요." + tail;
+  if (/phone_verification_required|card_verification_required/i.test(s)) return "Puter가 계정 확인을 요구해요. puter.com에 로그인해서 확인을 마친 뒤 다시 해 주세요." + tail;
+  if (/rate_limit|too_many|\b429\b/i.test(s)) return "요청이 몰려서 잠깐 막혔어요. 1분 뒤 다시 눌러 주세요." + tail;
+  if (/\b401\b|unauthorized|token_|not_signed|auth_required/i.test(s)) { puterOn = false; store.set("puter", false); renderAINote(); return "AI 연결이 끊겼어요. 위의 ‘AI 연결하기’를 다시 눌러 주세요." + tail; }
+  if (/network|fetch|connect|offline/i.test(s)) return "AI에 연결하지 못했어요. 인터넷 연결을 확인해 주세요." + tail;
+  return "AI가 강의를 만들지 못했어요. 다시 한 번 눌러 주세요." + tail;
 }
 const withTimeout = (p, ms) => new Promise((res, rej) => {
   const t = setTimeout(() => rej({ error: "stall" }), ms);
@@ -1332,7 +1343,7 @@ async function readPuter(resp, signal) {
       if (r.done) break;
       const part = r.value;
       if (!part) continue;
-      if (part.type === "error") throw { error: { message: part.message || "stream error" } };
+      if (part.type === "error") throw { error: { message: part.message || "stream error", code: part.code } };
       if (typeof part.text === "string" && (part.type === "text" || !part.type)) { out += part.text; genChars = out.length; }
     }
   } catch (e) { try { it.return && it.return(); } catch (x) {} throw e; }
@@ -1342,28 +1353,34 @@ async function callPuter(prompt, blob, signal) {
   const pt = await loadPuter();
   if (!puterSignedIn()) { puterOn = false; store.set("puter", false); renderAINote(); throw new Error("AI 연결이 끊겼어요. 위의 ‘AI 연결하기’를 다시 눌러 주세요."); }
   const file = blob ? new File([blob], "problem.jpg", { type: blob.type || "image/jpeg" }) : null;
-  const saved = store.get("puterModel2", null);
-  const models = saved != null ? [PUTER_CHAT_MODELS[saved], ...PUTER_CHAT_MODELS.filter((_, i) => i !== saved)].filter(Boolean) : PUTER_CHAT_MODELS;
-  let last = null;
+  const saved = store.get("puterModel3", null);
+  const models = saved != null && PUTER_CHAT_MODELS[saved] ? [PUTER_CHAT_MODELS[saved], ...PUTER_CHAT_MODELS.filter((_, i) => i !== saved)] : PUTER_CHAT_MODELS;
+  const t0 = Date.now();
+  let last = null, stalls = 0;
   for (const m of models) {
-    const opt = { stream: true, temperature: 0.4 };
+    if (Date.now() - t0 > PUTER_TOTAL_MS) break;
+    const opt = { stream: true, temperature: 0.4, max_tokens: PUTER_MAX_TOKENS };
     if (m.model) opt.model = m.model;
     if (m.reasoning_effort) opt.reasoning_effort = m.reasoning_effort;
     genChars = 0;
     try {
       const resp = await withAbort(withTimeout(file ? pt.ai.chat(prompt, file, false, opt) : pt.ai.chat(prompt, opt), PUTER_STALL_MS), signal);
       const out = await readPuter(resp, signal);
-      if (out && /[{]/.test(out)) { store.set("puterModel2", PUTER_CHAT_MODELS.indexOf(m)); return { text: out, provider: "Puter", model: m.model || "기본 모델" }; }
+      if (out && /[{]/.test(out)) { store.set("puterModel3", PUTER_CHAT_MODELS.indexOf(m)); return { text: out, provider: "Puter", model: m.model || "기본 모델" }; }
       last = new Error("빈 답이 왔어요");
     } catch (e) {
       if (signal && signal.aborted) throw e;
       last = e;
-      if (/insufficient|funds|credit|quota|upgrade|balance|auth|sign|login|token/i.test(errText(e))) break;
+      const s = puterCode(e) + " " + errText(e);
+      if (e && e.error === "stall") { if (++stalls >= 2) break; continue; }
+      // 모델 문제일 때만 다른 모델로 바꿔요. 사용량·인증 문제는 바꿔도 똑같아요
+      if (!/model|not.?found|unsupported|not.?support|unavailable|bad_request|field_invalid|reasoning/i.test(s)) break;
     }
   }
-  if (last && last.error === "stall") throw new Error("AI가 너무 오래 답하지 않아요. 잠시 뒤 다시 눌러 주세요.");
+  if (last && last.error === "stall") throw new Error("AI가 너무 오래 답하지 않아요. 잠시 뒤 다시 눌러 주세요. (stall)");
   throw new Error(friendlyPuter(last));
 }
+
 /* 기기 목소리 */
 function initWebVoice() {
   if (!("speechSynthesis" in window)) return;
@@ -1452,7 +1469,7 @@ async function synth(src, voice, text) {
   if (src.via === "puter") {
     let audio;
     try { audio = await window.puter.ai.txt2speech(text, { provider: "openai", model: "gpt-4o-mini-tts", voice, instructions: OAI_TTS_INSTR }); }
-    catch (e) { const m = errText(e); throw ttsErr(/insufficient|funds|credit|quota|limit|upgrade|balance|too many/i.test(m) ? 429 : /auth|sign|login|token/i.test(m) ? 401 : 500, m); }
+    catch (e) { const m = errText(e); const c = puterCode(e) + " " + m; throw ttsErr(/insufficient|funds|credit|quota|limit|upgrade|balance|too.?many|\b402\b|\b429\b/i.test(c) ? 429 : /\b401\b|unauthorized/i.test(c) ? 401 : 500, m); }
     const url = audio && (audio.src || audio.currentSrc);
     if (!url) throw ttsErr(500, "빈 음성이 왔어요");
     const r = await fetch(url);
