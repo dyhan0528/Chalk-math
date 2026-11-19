@@ -161,6 +161,8 @@ textarea:focus,input.txt:focus{outline:2px solid rgba(31,94,71,.25);border-color
 .capnote.connect{background:#eef5f1;border-color:#cfe3d8;text-align:center;padding:18px 16px}
 .capnote.connect>b{font-size:17px}
 .capnote.connect .connbtn{margin:14px auto 6px;min-width:220px}
+.capnote.connect .warnline{color:#8a5a00;font-weight:600;margin-top:8px}
+.capnote.connect .errline{margin:4px auto 8px;max-width:360px;padding:8px 10px;border-radius:10px;background:#fdecea;color:#b3261e;font-size:13.5px;line-height:1.55}
 .vlist .connbtn{margin:6px 0 2px;height:44px;min-width:180px}
 .modal{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;padding:16px}
 .sheet{background:var(--surf);border-radius:16px;padding:18px;max-width:520px;width:100%;margin-bottom:env(safe-area-inset-bottom)}
@@ -1191,7 +1193,29 @@ function voiceUsable() { return P.voiceOn && (useAI() || (!!VOICE.kind && perfor
    사용량은 로그인한 사람의 Puter 계정에서 나가요 (매달 무료 사용량이 있어요). */
 const PUTER_SRC = "https://js.puter.com/v2/";
 const PUTER_CHAT_MODELS = ["google/gemini-2.5-flash", "openai/gpt-5.4-mini", ""];   // "" = Puter 기본 모델
-let puterP = null, puterOn = !!store.get("puter", false), puterBusy = false, pendingConnectGen = false;
+let puterP = null, puterOn = !!store.get("puter", false), puterBusy = false, pendingConnectGen = false, puterErr = "";
+// 로그인 창(새 창)이 열리지 않는 곳: 카카오톡 같은 앱 안 브라우저, 아이폰 홈 화면 앱
+const UA = navigator.userAgent || "";
+const IS_IOS = /iPhone|iPad|iPod/i.test(UA) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const IN_APP = /KAKAOTALK/i.test(UA) ? "카카오톡" : /NAVER\(inapp|; NAVER/i.test(UA) ? "네이버 앱" : /Instagram/i.test(UA) ? "인스타그램" : /FBAN|FBAV|FB_IAB/i.test(UA) ? "페이스북" : /\bLine\//i.test(UA) ? "라인" : /DaumApps/i.test(UA) ? "다음 앱" : /BAND\//i.test(UA) ? "밴드" : /everytimeApp/i.test(UA) ? "에브리타임" : "";
+const IS_STANDALONE = (() => { try { return navigator.standalone === true || matchMedia("(display-mode: standalone)").matches; } catch (e) { return false; } })();
+const PUTER_ERR = {
+  popup_blocked: "로그인 창이 열리지 않았어요. 브라우저가 새 창을 막았어요.",
+  auth_window_closed: "로그인 창이 닫혀서 연결되지 않았어요. 다시 눌러서 로그인을 끝까지 해 주세요.",
+  unsupported_origin: "파일로 열면 연결할 수 없어요. 앱 주소로 열어 주세요.",
+  auth_timeout: "로그인을 기다리다 시간이 지났어요.",
+  not_signed_in: "로그인이 끝나지 않았어요."
+};
+function openInBrowser() {
+  const url = location.href;
+  if (/KAKAOTALK/i.test(UA)) { location.href = "kakaotalk://web/openExternal?url=" + encodeURIComponent(url); return; }
+  if (/Android/i.test(UA)) { location.href = "intent://" + location.host + location.pathname + location.search + location.hash + "#Intent;scheme=https;package=com.android.chrome;end"; return; }
+  copyText(url).then(ok => toast(ok ? "주소를 복사했어요. 사파리를 열고 주소창에 붙여 넣어 주세요." : "오른쪽 위 메뉴에서 ‘Safari로 열기’를 눌러 주세요."));
+}
+async function copyText(t) {
+  try { await Promise.race([navigator.clipboard.writeText(t), new Promise((_, r) => setTimeout(r, 1500))]); return true; } catch (e) {}
+  try { const ta = H("textarea", null, t); document.body.append(ta); ta.select(); const ok = document.execCommand("copy"); ta.remove(); return ok; } catch (e) { return false; }
+}
 function loadPuter() {
   if (window.puter && window.puter.ai) return Promise.resolve(window.puter);
   if (puterP) return puterP;
@@ -1221,27 +1245,44 @@ function errText(e) {
   if (m) return String(m);
   try { return JSON.stringify(e); } catch (x) { return String(e); }
 }
+function finishConnect() {
+  puterBusy = false; puterErr = "";
+  puterOn = true; store.set("puter", true);
+  VS.aiRestUntil = 0; VS.fails = 0;
+  toast("AI에 연결됐어요. 이제 사진만 찍으면 강의를 만들어요.");
+  renderAINote(); updateVoiceBar();
+  if ($("voiceModal") && !$("voiceModal").hidden) renderVoiceSheet();
+  if (pendingConnectGen && (genImg || $("qText").value.trim())) { pendingConnectGen = false; hideErr(); generate(); }
+}
 async function connectPuter() {
   if (puterBusy) return;
-  puterBusy = true; renderAINote();
+  puterErr = ""; puterBusy = true; renderAINote();
+  const stuck = setTimeout(() => {
+    if (!puterBusy) return;
+    puterBusy = false;
+    puterErr = "로그인 창에서 연결이 끝나지 않았어요. 다시 눌러 주세요." + (IN_APP || IS_STANDALONE ? "" : " 계속 이러면 크롬이나 사파리에서 열어 주세요.");
+    renderAINote();
+  }, 120000);
   try {
     const pt = (window.puter && window.puter.auth) ? window.puter : await loadPuter();
     if (!puterSignedIn()) await pt.auth.signIn();
-    if (!puterSignedIn()) throw new Error("로그인이 끝나지 않았어요.");
-    puterOn = true; store.set("puter", true);
-    VS.aiRestUntil = 0; VS.fails = 0;
-    toast("AI에 연결됐어요. 이제 사진만 찍으면 강의를 만들어요.");
-    puterBusy = false; renderAINote(); updateVoiceBar();
-    if ($("voiceModal") && !$("voiceModal").hidden) renderVoiceSheet();
-    if (pendingConnectGen && (genImg || $("qText").value.trim())) { pendingConnectGen = false; hideErr(); generate(); }
+    clearTimeout(stuck);
+    if (!puterSignedIn()) throw { error: "not_signed_in" };
+    finishConnect();
   } catch (e) {
-    puterBusy = false; renderAINote();
+    clearTimeout(stuck);
+    if (puterSignedIn()) { finishConnect(); return; }
+    puterBusy = false;
+    const code = e && typeof e.error === "string" ? e.error : (e && typeof e.code === "string" ? e.code : "");
     const m = errText(e);
-    if (/popup|blocked/i.test(m)) toast("로그인 창이 막혔어요. ‘AI 연결하기’를 한 번 더 눌러 주세요.");
-    else if (!IS_WEB) toast("파일로 열면 연결이 안 될 수 있어요. 앱 주소로 열어서 다시 눌러 주세요.");
-    else toast("연결하지 못했어요. 로그인 창에서 끝까지 진행했는지 확인하고 다시 눌러 주세요.");
+    puterErr = (PUTER_ERR[code] || (/불러오지/.test(m) ? m : "연결하지 못했어요.")) + (code ? " (" + code + ")" : m && !/불러오지/.test(m) ? " (" + m.slice(0, 80) + ")" : "");
+    if (code !== "unsupported_origin" && !IN_APP && !IS_STANDALONE) puterErr += " 계속 안 되면 크롬이나 사파리에서 열어 주세요.";
+    renderAINote();
+    setTimeout(() => { const n = $("aiNote"); if (n) n.scrollIntoView({ behavior: "smooth", block: "center" }); }, 80);
   }
 }
+// 로그인 창에서 돌아왔을 때 연결이 끝났는지 다시 봐요
+document.addEventListener("visibilitychange", () => { if (!document.hidden && puterBusy && puterSignedIn()) finishConnect(); });
 function disconnectPuter() {
   puterOn = false; store.set("puter", false);
   try { if (window.puter && window.puter.auth) window.puter.auth.signOut(); } catch (e) {}
@@ -1866,10 +1907,19 @@ function renderAINote() {
     n.append("AI에 연결됐어요 · Puter 계정 ", H("button", { class: "linkbtn", onclick: disconnectPuter }, "연결 끊기"));
   } else {
     n.className = "capnote connect"; n.hidden = false; kb.hidden = true;
-    n.append(H("b", null, "AI에 연결해 주세요"),
-      H("div", { class: "subnote" }, "버튼 한 번이면 돼요. 처음 한 번만 무료 Puter 계정으로 로그인하면, 다음부터는 사진만 찍으면 강의가 만들어져요. 키는 필요 없어요."),
-      (() => { const b = H("button", { class: "btn primary big connbtn", id: "bConnect", onclick: connectPuter }, puterBusy ? "연결하는 중…" : "AI 연결하기"); b.disabled = puterBusy; return b; })(),
-      H("div", { class: "subnote" }, "직접 키가 있는 분은 ", advLink("고급 설정: 내 AI 키로 쓰기"), "를 눌러도 돼요."));
+    const connBtn = (label, primary) => { const b = H("button", { class: "btn big connbtn" + (primary ? " primary" : ""), id: "bConnect", onclick: connectPuter }, puterBusy ? "연결하는 중…" : label); b.disabled = puterBusy; return b; };
+    n.append(H("b", null, "AI에 연결해 주세요"));
+    if (IN_APP) {
+      n.append(H("div", { class: "subnote warnline" }, IN_APP + " 안에서는 AI 로그인 창이 열리지 않아요. 크롬이나 사파리에서 열어 주세요."),
+        H("button", { class: "btn primary big connbtn", onclick: openInBrowser }, IS_IOS && !/KAKAOTALK/i.test(UA) ? "주소 복사하기" : "크롬·사파리로 열기"),
+        H("div", { class: "subnote" }, IS_IOS && !/KAKAOTALK/i.test(UA) ? "복사한 주소를 사파리에 붙여 넣어 열어 주세요." : "열린 브라우저에서 ‘AI 연결하기’를 눌러 주세요."));
+    } else {
+      n.append(H("div", { class: "subnote" }, "버튼 한 번이면 돼요. 처음 한 번만 무료 Puter 계정으로 로그인하면, 다음부터는 사진만 찍으면 강의가 만들어져요. 키는 필요 없어요."));
+      if (IS_STANDALONE && IS_IOS) n.append(H("div", { class: "subnote warnline" }, "홈 화면에 추가한 앱에서는 로그인 창이 사파리로 넘어가서 연결이 안 될 수 있어요. 그러면 사파리에서 앱 주소를 열어 연결해 주세요."));
+      n.append(connBtn("AI 연결하기", true));
+    }
+    if (puterErr) n.append(H("div", { class: "errline" }, puterErr));
+    n.append(H("div", { class: "subnote" }, "직접 키가 있는 분은 ", advLink("고급 설정: 내 AI 키로 쓰기"), "를 눌러도 돼요."));
     if (!puterP && !window.puter) warmPuter();
   }
   const savedPass = store.get("pass", "");
